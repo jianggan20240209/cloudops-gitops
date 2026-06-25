@@ -17,7 +17,7 @@ spec:
     - host: cloudops.jianggan.cn
       http:
         paths:
-          - path: /api
+          - path: {{ .Values.app.ingressPath | default "/api" }}
             pathType: Prefix
             backend:
               service:

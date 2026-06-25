@@ -5,6 +5,7 @@ base:
 app:
   serviceName: cloudops-gateway
   servicePort: 80
+  ingressPath: /api
   imageTag: main-8
   replicas: 2
 

@@ -60,7 +60,9 @@ prod/
 ```text
 dev/backend/deployment/go/base
 dev/backend/deployment/go/base/values/cloudops-gateway.yaml
+dev/backend/deployment/go/base/values/cloudops-cicd.yaml
 dev/backend/argocd/application/cloudops-gateway-dev.yaml
+dev/backend/argocd/application/cloudops-cicd-dev.yaml
 dev/backend/argocd/project/dev-backend-project.yaml
 
 dev/frontend/deployment/ui/base
@@ -328,6 +330,7 @@ operationState.phase = Error
 | 应用 | 类型 | Helm base | Argo CD Application | 当前镜像 tag |
 |---|---|---|---|---|
 | `cloudops-gateway` | Go backend | `dev/backend/deployment/go/base` | `cloudops-gateway-dev` | `main-14` |
+| `cloudops-cicd` | Go backend | `dev/backend/deployment/go/base` | `cloudops-cicd-dev` | `main-1` |
 | `cloudops-web` | UI frontend | `dev/frontend/deployment/ui/base` | `cloudops-web-dev` | `main-8` |
 
 ## 9. 已验证结果
@@ -360,7 +363,29 @@ Argo CD status: Synced / Healthy
 Service endpoint: https://cloudops.jianggan.cn/
 ```
 
-### 9.3 最终状态检查
+### 9.3 cloudops-cicd
+
+第一版已创建静态 API 模型：
+
+```text
+Image: harbor-server.jianggan.cn/cloudops/cloudops-cicd:main-1
+Argo CD Application: cloudops-cicd-dev
+Helm base: dev/backend/deployment/go/base
+Helm values: values/cloudops-cicd.yaml
+Service endpoint: https://cloudops.jianggan.cn/api/v1/cicd/apps
+Metrics: cloudops_cicd_info
+```
+
+第一版接口：
+
+```text
+GET /api/v1/cicd/apps
+GET /api/v1/cicd/apps/{name}
+GET /api/v1/cicd/apps/{name}/status
+GET /api/v1/cicd/apps/{name}/releases
+```
+
+### 9.4 最终状态检查
 
 最终检查命令：
 
@@ -387,7 +412,7 @@ cloudops-gateway /api/v1/version 返回 version=main-14
 cloudops-web / 返回前端 HTML 页面
 ```
 
-### 9.4 排障记录
+### 9.5 排障记录
 
 本次 Jenkins + Argo CD API 发布链路中遇到并修复了以下问题：
 

@@ -3,10 +3,10 @@ base:
   namespace: cloudops-dev
 
 app:
-  serviceName: cloudops-gateway
+  serviceName: cloudops-cicd
   servicePort: 80
-  ingressPath: /api
-  imageTag: main-8
+  ingressPath: /api/v1/cicd
+  imageTag: main-1
   replicas: 2
 
 service:
