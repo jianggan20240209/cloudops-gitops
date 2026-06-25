@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cloudops-ui.name" . }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-ui.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app: {{ include "cloudops-ui.name" . }}
+  ports:
+    - name: http
+      port: {{ .Values.app.servicePort }}
+      targetPort: {{ .Values.service.targetPort }}

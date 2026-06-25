@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "cloudops-ui.name" . }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-ui.labels" . | indent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: jianggan-ca-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - cloudops.jianggan.cn
+      secretName: cloudops-jianggan-cn-tls
+  rules:
+    - host: cloudops.jianggan.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "cloudops-ui.name" . }}
+                port:
+                  number: {{ .Values.app.servicePort }}

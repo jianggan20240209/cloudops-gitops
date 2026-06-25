@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: prod-backend
+  namespace: argocd
+spec:
+  description: CloudOps prod backend applications
+  sourceRepos:
+    - https://github.com/jianggan20240209/cloudops-gitops.git
+  destinations:
+    - namespace: cloudops-prod
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

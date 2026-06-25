@@ -1,0 +1,13 @@
+base:
+  envName: dev
+  namespace: cloudops-dev
+
+app:
+  serviceName: cloudops-gateway
+  servicePort: 80
+  imageTag: main-8
+  replicas: 2
+
+service:
+  targetPort: 8080
+  type: ClusterIP

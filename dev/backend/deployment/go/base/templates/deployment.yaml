@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudops-go.name" . }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-go.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "cloudops-go.name" . }}
+  template:
+    metadata:
+      labels:
+{{ include "cloudops-go.labels" . | indent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: harbor-pull-secret
+      containers:
+        - name: {{ include "cloudops-go.name" . }}
+          image: harbor-server.jianggan.cn/cloudops/{{ .Values.app.serviceName }}:{{ .Values.app.imageTag }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: HTTP_ADDR
+              value: ":{{ .Values.service.targetPort }}"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi

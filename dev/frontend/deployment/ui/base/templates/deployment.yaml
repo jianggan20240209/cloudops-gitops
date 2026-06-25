@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cloudops-ui.name" . }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-ui.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "cloudops-ui.name" . }}
+  template:
+    metadata:
+      labels:
+{{ include "cloudops-ui.labels" . | indent 8 }}
+    spec:
+      imagePullSecrets:
+        - name: harbor-pull-secret
+      containers:
+        - name: {{ include "cloudops-ui.name" . }}
+          image: harbor-server.jianggan.cn/cloudops/{{ .Values.app.serviceName }}:{{ .Values.app.imageTag }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

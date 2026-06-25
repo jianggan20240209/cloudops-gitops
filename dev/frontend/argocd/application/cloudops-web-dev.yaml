@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudops-web-dev
+  namespace: argocd
+spec:
+  project: dev-frontend
+  source:
+    repoURL: https://github.com/jianggan20240209/cloudops-gitops.git
+    targetRevision: main
+    path: dev/frontend/deployment/ui/base
+    helm:
+      valueFiles:
+        - values/cloudops-web.yaml
+      parameters:
+        - name: app.imageTag
+          value: main-7
+          forceString: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudops-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

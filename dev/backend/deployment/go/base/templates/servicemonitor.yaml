@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "cloudops-go.name" . }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+    release: kube-prometheus-stack
+{{ include "cloudops-go.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "cloudops-go.name" . }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Values.base.namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
