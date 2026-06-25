@@ -274,7 +274,7 @@ harbor-server.jianggan.cn/cloudops/cloudops-web:main-8
 Jenkins 构建镜像成功后，调用：
 
 ```text
-PATCH /api/v1/applications/<application-name>
+PUT /api/v1/applications/<application-name>
 ```
 
 更新 Helm 参数：
@@ -290,6 +290,14 @@ POST /api/v1/applications/<application-name>/sync
 ```
 
 触发同步。
+
+注意：
+
+```text
+不要使用 Content-Type: application/merge-patch+json。
+当前验证可用方式是使用 Content-Type: application/json，并提交完整 Application 结构。
+curl 必须加 -f，确保 Argo CD API 返回非 2xx 时流水线失败。
+```
 
 ### 7.3 轮询发布结果
 
@@ -319,10 +327,88 @@ operationState.phase = Error
 
 | 应用 | 类型 | Helm base | Argo CD Application | 当前镜像 tag |
 |---|---|---|---|---|
-| `cloudops-gateway` | Go backend | `dev/backend/deployment/go/base` | `cloudops-gateway-dev` | `main-8` |
-| `cloudops-web` | UI frontend | `dev/frontend/deployment/ui/base` | `cloudops-web-dev` | `main-7` |
+| `cloudops-gateway` | Go backend | `dev/backend/deployment/go/base` | `cloudops-gateway-dev` | `main-14` |
+| `cloudops-web` | UI frontend | `dev/frontend/deployment/ui/base` | `cloudops-web-dev` | `main-8` |
 
-## 9. 后续优化
+## 9. 已验证结果
+
+### 9.1 cloudops-gateway
+
+已验证：
+
+```text
+Jenkins BUILD_NUMBER: 14
+Image: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+Argo CD Application: cloudops-gateway-dev
+Helm parameter: app.imageTag=main-14
+Deployment image: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+Service endpoint: https://cloudops.jianggan.cn/api/v1/version
+Service version: main-14
+Commit: c308075261dc
+Argo CD status: Synced / Healthy
+```
+
+### 9.2 cloudops-web
+
+已验证：
+
+```text
+Image: harbor-server.jianggan.cn/cloudops/cloudops-web:main-8
+Argo CD Application: cloudops-web-dev
+Helm parameter: app.imageTag=main-8
+Argo CD status: Synced / Healthy
+Service endpoint: https://cloudops.jianggan.cn/
+```
+
+### 9.3 最终状态检查
+
+最终检查命令：
+
+```bash
+kubectl -n argocd get application cloudops-gateway-dev cloudops-web-dev
+
+kubectl -n cloudops-dev get deploy cloudops-gateway cloudops-web \
+  -o custom-columns=NAME:.metadata.name,IMAGE:.spec.template.spec.containers[0].image
+
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/version
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/
+```
+
+最终结果：
+
+```text
+cloudops-gateway-dev   Synced   Healthy
+cloudops-web-dev       Synced   Healthy
+
+cloudops-gateway   harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+cloudops-web       harbor-server.jianggan.cn/cloudops/cloudops-web:main-8
+
+cloudops-gateway /api/v1/version 返回 version=main-14
+cloudops-web / 返回前端 HTML 页面
+```
+
+### 9.4 排障记录
+
+本次 Jenkins + Argo CD API 发布链路中遇到并修复了以下问题：
+
+```text
+1. Declarative Pipeline 默认 Checkout 早于代理配置执行。
+   修复: 增加 skipDefaultCheckout(true)，改用显式 Checkout 阶段。
+
+2. Kaniko 容器内没有 git 命令。
+   修复: 在 jnlp 容器生成 gateway-build.env，再在 kaniko 容器读取。
+
+3. curl sidecar 容器无法启动 Jenkins durable task。
+   修复: curl 容器使用 command: cat、tty: true、runAsUser: 0，并挂载 workspace-volume。
+
+4. PATCH application/merge-patch+json 返回 Invalid content type。
+   修复: 改用 PUT /api/v1/applications/<app>，Content-Type: application/json，提交完整 Application body。
+
+5. 校验 imageTag 时误抓 status.history 中的旧 tag。
+   修复: 只校验顶层 spec 部分是否包含当前 IMAGE_TAG，避免被历史字段干扰。
+```
+
+## 10. 后续优化
 
 后续建议：
 
