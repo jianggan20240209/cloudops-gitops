@@ -33,3 +33,15 @@ harbor:
 prometheus:
   enabled: false
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+
+releaseRecords:
+  database:
+    enabled: false
+    dsnSecret:
+      name: cloudops-cicd-postgres
+      key: database-url
+  writeAuth:
+    enabled: false
+    tokenSecret:
+      name: cloudops-cicd-release-record-token
+      key: token

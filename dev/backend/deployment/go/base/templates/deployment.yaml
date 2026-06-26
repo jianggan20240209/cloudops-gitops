@@ -58,6 +58,20 @@ spec:
             - name: PROMETHEUS_SERVER
               value: {{ .Values.prometheus.server | quote }}
 {{- end }}
+{{- if .Values.releaseRecords.database.enabled }}
+            - name: RELEASE_RECORD_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.releaseRecords.database.dsnSecret.name }}
+                  key: {{ .Values.releaseRecords.database.dsnSecret.key }}
+{{- end }}
+{{- if .Values.releaseRecords.writeAuth.enabled }}
+            - name: RELEASE_RECORD_WRITE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.releaseRecords.writeAuth.tokenSecret.name }}
+                  key: {{ .Values.releaseRecords.writeAuth.tokenSecret.key }}
+{{- end }}
           readinessProbe:
             httpGet:
               path: /readyz

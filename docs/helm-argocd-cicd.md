@@ -649,13 +649,68 @@ v6 当前实现边界：
   prometheus_up: pass
 ```
 
-后续演进方向：
+第七到第十版发布记录闭环：
 
 ```text
-Jenkins 发布成功后调用 cloudops-cicd 写入 Release Record
-Release Record 持久化到 PostgreSQL 或对象存储
-回滚接口基于 Release Record 选择历史 imageTag / revision
-灰度发布接入 Argo Rollouts 后记录每个阶段的验证结果
+v7:
+  新增 POST /api/v1/cicd/releases/records
+  支持写入 Release Record
+  未配置数据库时使用内存存储
+
+v8:
+  Jenkinsfile.cloudops-cicd-kaniko 在 Argo CD Synced / Healthy 后自动上报 Release Record
+  记录 Jenkins job/build、image tag、Argo CD revision、同步状态和验证结果
+
+v9:
+  cloudops-cicd 支持 RELEASE_RECORD_DATABASE_URL / POSTGRES_DSN
+  配置 PostgreSQL DSN 后自动创建 release_records 表并持久化发布记录
+  Helm values 已预留 releaseRecords.database.dsnSecret 配置，默认关闭
+
+v10:
+  新增 GET /api/v1/cicd/apps/{name}/rollback-candidates
+  从 Release Record 中筛选 status=succeeded 且 verification.ready=true 的历史版本
+  排除当前运行 imageTag，仅提供候选版本查询，不触发实际回滚
+```
+
+新增接口：
+
+```text
+POST /api/v1/cicd/releases/records
+GET /api/v1/cicd/apps/{name}/rollback-candidates
+```
+
+发布记录存储策略：
+
+```text
+默认:
+  MemoryReleaseRecordStore
+  适合本地开发和未部署 PostgreSQL 的个人实验阶段
+
+启用 PostgreSQL:
+  设置 RELEASE_RECORD_DATABASE_URL
+  或设置 POSTGRES_DSN
+  服务启动时自动创建 release_records 表
+
+写入鉴权:
+  RELEASE_RECORD_WRITE_TOKEN 为空时不校验 token
+  配置后支持 Authorization: Bearer <token>
+  也支持 X-Release-Record-Token
+```
+
+Helm 预留配置：
+
+```yaml
+releaseRecords:
+  database:
+    enabled: false
+    dsnSecret:
+      name: cloudops-cicd-postgres
+      key: database-url
+  writeAuth:
+    enabled: false
+    tokenSecret:
+      name: cloudops-cicd-release-record-token
+      key: token
 ```
 
 实时返回应用：
