@@ -96,6 +96,51 @@ kubectl -n cloudops-dev describe rollout rollouts-demo
 kubectl -n cloudops-dev get rollout rollouts-demo -o yaml
 ```
 
+观察 Rollout 变更时，分别 watch Rollout 和 Pod / ReplicaSet：
+
+```bash
+kubectl -n cloudops-dev get rollout rollouts-demo -w
+kubectl -n cloudops-dev get rs -l app=rollouts-demo -w
+kubectl -n cloudops-dev get pod -l app=rollouts-demo -w
+```
+
+注意：当前环境里 `kubectl get rs,pod -l app=rollouts-demo -w` 会报 `you may only specify a single resource type`，因此不要把多种资源类型合并到同一个 watch 命令。
+
+## 初始部署验证结果
+
+验证时间：2026-06-26
+
+Argo CD Application：
+
+```text
+argo-rollouts-dev                     Synced / Healthy
+argo-rollouts-dashboard-dev           Synced / Healthy
+argo-rollouts-dashboard-ingress-dev   Synced / Healthy
+rollouts-demo-dev                     Synced / Healthy
+```
+
+Argo Rollouts 组件：
+
+```text
+deployment/argo-rollouts             1/1
+deployment/argo-rollouts-dashboard   1/1
+pod/argo-rollouts-*                  Running
+pod/argo-rollouts-dashboard-*        Running
+service/argo-rollouts-dashboard      3100/TCP
+ingress/argo-rollouts-dashboard      rollouts.jianggan.cn
+```
+
+Demo Rollout：
+
+```text
+rollout/rollouts-demo                Healthy / Completed
+replicas:                            2
+availableReplicas:                   2
+stableRS:                            rollouts-demo-7dd7d49744
+image:                               harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+ingress:                             rollouts-demo.jianggan.cn
+```
+
 ## Canary Demo
 
 当前 `rollouts-demo` 使用已有 Harbor 镜像，避免额外拉取外部 demo 镜像：
