@@ -12,3 +12,11 @@ app:
 service:
   targetPort: 8080
   type: ClusterIP
+
+argocd:
+  enabled: true
+  server: https://argocd.jianggan.cn
+  insecure: "true"
+  tokenSecret:
+    name: cloudops-cicd-argocd-token
+    key: token
