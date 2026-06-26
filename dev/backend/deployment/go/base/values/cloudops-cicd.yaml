@@ -29,3 +29,7 @@ harbor:
     name: cloudops-cicd-harbor-credential
     usernameKey: username
     passwordKey: password
+
+prometheus:
+  enabled: true
+  server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090

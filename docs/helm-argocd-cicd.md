@@ -256,6 +256,11 @@ cloudops-cicd-harbor-credential:
   字段:
     username
     password
+
+PROMETHEUS_SERVER:
+  类型: 环境变量
+  当前值: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+  用途: cloudops-cicd 查询 Prometheus 运行指标
 ```
 
 `argocd-auth-token` 应使用 Argo CD 账号生成的 API token。
@@ -373,7 +378,7 @@ Service endpoint: https://cloudops.jianggan.cn/
 
 ### 9.3 cloudops-cicd
 
-第二版已接入 Argo CD API 实时状态：
+当前已接入 Argo CD API、Harbor API 和 Prometheus API：
 
 ```text
 Jenkins: test-cloudops-cicd-kaniko #1 SUCCESS
@@ -388,7 +393,7 @@ Argo CD status: Synced / Healthy
 Data source: argocd
 ```
 
-第一版接口：
+发布中心接口：
 
 ```text
 GET /api/v1/cicd/apps
@@ -396,6 +401,7 @@ GET /api/v1/cicd/apps/{name}
 GET /api/v1/cicd/apps/{name}/status
 GET /api/v1/cicd/apps/{name}/releases
 GET /api/v1/cicd/apps/{name}/images
+GET /api/v1/cicd/apps/{name}/metrics
 ```
 
 已验证接口：
@@ -414,7 +420,57 @@ GET /api/v1/cicd/apps/cloudops-web/images
 GET /api/v1/cicd/apps/cloudops-cicd/images
 ```
 
+Harbor API 验证结果：
+
+```text
+cloudops-gateway:
+  source: harbor
+  total: 10
+  latest: main-14
+
+cloudops-web:
+  source: harbor
+  total: 3
+  latest: main-8
+
+cloudops-cicd:
+  source: harbor
+  total: 4
+  latest: main-4
+```
+
+这说明发布中心当前已经具备：
+
+```text
+Argo CD API -> 应用部署状态
+Harbor API -> 镜像版本列表
+Prometheus API -> 应用基础运行指标
+```
+
 未配置 Harbor 凭据或查询失败时，接口会回退静态发布历史，并返回 `source=static` 和 `warning`。
+
+第四版新增 Prometheus 指标查询：
+
+```text
+GET /api/v1/cicd/apps/cloudops-gateway/metrics
+GET /api/v1/cicd/apps/cloudops-web/metrics
+GET /api/v1/cicd/apps/cloudops-cicd/metrics
+```
+
+第一版 Prometheus 查询：
+
+```text
+up{job="<app-name>"}
+```
+
+返回字段：
+
+```text
+source: prometheus 或 static
+up: 当前 up 的 target 数
+targets: 匹配到的 target 总数
+healthy: targets > 0 且 up == targets
+```
 
 实时返回应用：
 

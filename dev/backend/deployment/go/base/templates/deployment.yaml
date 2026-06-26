@@ -54,6 +54,10 @@ spec:
                   name: {{ .Values.harbor.credentialSecret.name }}
                   key: {{ .Values.harbor.credentialSecret.passwordKey }}
 {{- end }}
+{{- if .Values.prometheus.enabled }}
+            - name: PROMETHEUS_SERVER
+              value: {{ .Values.prometheus.server | quote }}
+{{- end }}
           readinessProbe:
             httpGet:
               path: /readyz
