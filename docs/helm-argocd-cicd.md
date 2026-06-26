@@ -540,6 +540,29 @@ ready:
 
 该版本只做发布详情聚合、健康判断和发布后验证结果展示，不直接触发 Argo CD 同步、灰度、回滚或 Kubernetes 变更操作。灰度发布和回滚后续建议接入 Argo Rollouts 后再做运行态控制。
 
+第五版实际验证结果：
+
+```text
+验证时间: 2026-06-26
+验证应用: cloudops-gateway
+当前镜像: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+Argo CD: Synced / Healthy
+Harbor: 当前 tag main-14 存在于镜像仓库
+Prometheus: up=2, targets=2, healthy=true
+数据来源: app:argocd,images:harbor,metrics:prometheus
+发布结论: ready=true
+```
+
+验证通过的检查项：
+
+```text
+argocd_sync: pass
+argocd_health: pass
+image_tag: pass
+harbor_image: pass
+prometheus_up: pass
+```
+
 实时返回应用：
 
 ```text
