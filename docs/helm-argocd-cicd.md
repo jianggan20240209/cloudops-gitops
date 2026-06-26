@@ -402,6 +402,9 @@ GET /api/v1/cicd/apps/{name}/status
 GET /api/v1/cicd/apps/{name}/releases
 GET /api/v1/cicd/apps/{name}/images
 GET /api/v1/cicd/apps/{name}/metrics
+GET /api/v1/cicd/apps/{name}/release
+GET /api/v1/cicd/apps/{name}/health
+GET /api/v1/cicd/apps/{name}/verify
 ```
 
 已验证接口：
@@ -496,6 +499,46 @@ up: 当前 up 的 target 数
 targets: 匹配到的 target 总数
 healthy: targets > 0 且 up == targets
 ```
+
+第五版新增发布详情聚合和发布后验证接口：
+
+```text
+GET /api/v1/cicd/apps/{name}/release
+GET /api/v1/cicd/apps/{name}/health
+GET /api/v1/cicd/apps/{name}/verify
+```
+
+聚合逻辑：
+
+```text
+Argo CD:
+  sync == Synced
+  health == Healthy
+  image / current_tag / revision / updated_at
+
+Harbor:
+  查询应用镜像 tag 列表
+  检查当前运行 current_tag 是否存在于镜像仓库
+
+Prometheus:
+  查询 up{job="<app-name>"}
+  targets > 0 且 up == targets 时判定指标健康
+```
+
+接口返回统一检查项：
+
+```text
+checks[].status:
+  pass: 检查通过
+  warn: 依赖未配置或指标不可用，但不直接阻断基础发布状态展示
+  fail: 检查失败，ready=false
+
+ready:
+  只要存在 fail 即为 false
+  全部为 pass / warn 时为 true
+```
+
+该版本只做发布详情聚合、健康判断和发布后验证结果展示，不直接触发 Argo CD 同步、灰度、回滚或 Kubernetes 变更操作。灰度发布和回滚后续建议接入 Argo Rollouts 后再做运行态控制。
 
 实时返回应用：
 
