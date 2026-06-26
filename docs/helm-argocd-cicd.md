@@ -563,6 +563,67 @@ harbor_image: pass
 prometheus_up: pass
 ```
 
+第六版新增发布批次记录模型：
+
+```text
+GET /api/v1/cicd/apps/{name}/records
+GET /api/v1/cicd/apps/{name}/records/latest
+GET /api/v1/cicd/apps/{name}/records/{id}
+```
+
+Release Record 目标：
+
+```text
+将一次 Jenkins 构建、镜像 tag、Argo CD revision、发布后验证结果沉淀为一条发布记录。
+```
+
+当前记录字段：
+
+```text
+id:
+  发布记录 ID，例如 dev-cloudops-gateway-main-14
+
+jenkins_job / jenkins_build:
+  记录来源 Jenkins 任务和构建号，当前从 main-${BUILD_NUMBER} 镜像 tag 中提取构建号
+
+image / image_tag / image_digest:
+  记录实际发布镜像和 Harbor digest
+
+argocd_app / argocd_revision / argocd_sync / argocd_health:
+  记录 GitOps 应用、Git revision、同步状态和健康状态
+
+verification:
+  固化发布后验证结果，包括 ready、checks、metrics、warnings、verified_at
+
+status:
+  succeeded / failed / unknown
+```
+
+v6 当前实现边界：
+
+```text
+最新发布记录:
+  由实时 Argo CD、Harbor、Prometheus 聚合结果生成
+
+历史发布记录:
+  来自 cloudops-cicd 内置发布历史
+
+不做的事情:
+  不写数据库
+  不触发 Jenkins
+  不触发 Argo CD 同步
+  不变更 Kubernetes 运行态
+```
+
+后续演进方向：
+
+```text
+Jenkins 发布成功后调用 cloudops-cicd 写入 Release Record
+Release Record 持久化到 PostgreSQL 或对象存储
+回滚接口基于 Release Record 选择历史 imageTag / revision
+灰度发布接入 Argo Rollouts 后记录每个阶段的验证结果
+```
+
 实时返回应用：
 
 ```text
