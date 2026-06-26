@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rollouts-demo
+  namespace: cloudops-dev
+  labels:
+    app: rollouts-demo
+    env: dev
+    app.kubernetes.io/name: rollouts-demo
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    cert-manager.io/cluster-issuer: jianggan-ca-issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - rollouts-demo.jianggan.cn
+      secretName: rollouts-demo-jianggan-cn-tls
+  rules:
+    - host: rollouts-demo.jianggan.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rollouts-demo
+                port:
+                  number: 80
