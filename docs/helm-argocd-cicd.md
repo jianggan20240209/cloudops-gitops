@@ -457,6 +457,31 @@ GET /api/v1/cicd/apps/cloudops-web/metrics
 GET /api/v1/cicd/apps/cloudops-cicd/metrics
 ```
 
+Prometheus API 验证结果：
+
+```text
+cloudops-gateway:
+  source: prometheus
+  up: 2
+  targets: 2
+  healthy: true
+
+cloudops-cicd:
+  source: prometheus
+  up: 2
+  targets: 2
+  healthy: true
+
+cloudops-web:
+  source: prometheus
+  up: 0
+  targets: 0
+  healthy: false
+  message: no prometheus targets matched up{job="cloudops-web"}
+```
+
+说明：`cloudops-web` 当前没有独立 ServiceMonitor / metrics endpoint，因此 Prometheus 未匹配到 `up{job="cloudops-web"}`，返回 `targets=0` 属于预期结果。
+
 第一版 Prometheus 查询：
 
 ```text
