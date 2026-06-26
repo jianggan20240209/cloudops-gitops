@@ -769,6 +769,11 @@ cloudops-web / 返回前端 HTML 页面
 
 5. 校验 imageTag 时误抓 status.history 中的旧 tag。
    修复: 只校验顶层 spec 部分是否包含当前 IMAGE_TAG，避免被历史字段干扰。
+
+6. cloudops-cicd 新增 PostgreSQL 驱动后 Kaniko 构建失败。
+   现象: go build 报 missing go.sum entry for module providing package github.com/lib/pq。
+   原因: Dockerfile 只复制 go.mod 和 main.go，未复制 go.sum。
+   修复: Dockerfile 改为 COPY go.mod go.sum ./，并在复制 main.go 前执行 go mod download。
 ```
 
 ## 10. 后续优化
