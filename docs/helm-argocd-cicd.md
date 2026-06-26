@@ -713,6 +713,51 @@ releaseRecords:
       key: token
 ```
 
+第七到第十版实际验证结果：
+
+```text
+验证时间: 2026-06-26
+验证应用: cloudops-cicd
+当前镜像: harbor-server.jianggan.cn/cloudops/cloudops-cicd:main-10
+当前 revision: e6d60a79fa99fb7d24994795df4c4796475742a4
+
+GET /api/v1/cicd/apps/cloudops-cicd/records:
+  返回 main-10 实时聚合记录
+  source: app:argocd,images:harbor,metrics:prometheus
+  status: succeeded
+  verification.ready: true
+  prometheus: up=3, targets=3, healthy=true
+
+GET /api/v1/cicd/apps/cloudops-cicd/records/latest:
+  返回 Jenkins 写入记录
+  source: jenkins
+  status: succeeded
+  verification.ready: true
+
+GET /api/v1/cicd/apps/cloudops-cicd/rollback-candidates:
+  current_tag: main-10
+  返回候选版本: main-2
+```
+
+验证结论：
+
+```text
+主链路已通过:
+  Jenkins 构建 cloudops-cicd:main-10
+  Argo CD 同步到 main-10
+  Release Record 写入成功
+  回滚候选查询可用
+
+发现的问题:
+  当前 source=memory
+  cloudops-cicd 多副本运行时，每个 Pod 的内存存储互不共享
+  /records 和 /records/latest 可能被 Service 负载到不同 Pod，导致查询到的记录来源不同
+
+处理原则:
+  memory 只作为本地开发或单副本实验模式
+  多副本、发布审计、回滚候选可靠性验证必须启用 PostgreSQL
+```
+
 实时返回应用：
 
 ```text
