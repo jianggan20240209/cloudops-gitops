@@ -15,6 +15,20 @@ spec:
       labels:
 {{ include "cloudops-go.labels" . | indent 8 }}
     spec:
+{{- if .Values.releaseRecords.postgres.enabled }}
+      initContainers:
+        - name: wait-for-postgres
+          image: {{ .Values.releaseRecords.postgres.image }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ .Values.releaseRecords.postgres.serviceName }} -U {{ .Values.releaseRecords.postgres.username }} -d {{ .Values.releaseRecords.postgres.database }}; do
+                echo "waiting for postgres {{ .Values.releaseRecords.postgres.serviceName }}"
+                sleep 2
+              done
+{{- end }}
       imagePullSecrets:
         - name: harbor-pull-secret
       containers:

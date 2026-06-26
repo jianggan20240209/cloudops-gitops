@@ -758,6 +758,61 @@ GET /api/v1/cicd/apps/cloudops-cicd/rollback-candidates:
   多副本、发布审计、回滚候选可靠性验证必须启用 PostgreSQL
 ```
 
+第十一版启用 PostgreSQL 持久化 Release Record：
+
+```text
+目标:
+  解决 cloudops-cicd 多副本下 MemoryReleaseRecordStore 不一致问题
+  让 Jenkins 写入记录、实时聚合记录、回滚候选查询都通过共享 PostgreSQL 持久化
+
+GitOps 改动:
+  dev/backend/deployment/go/base/templates/postgres-secret.yaml
+  dev/backend/deployment/go/base/templates/postgres-service.yaml
+  dev/backend/deployment/go/base/templates/postgres-statefulset.yaml
+  dev/backend/deployment/go/base/values/cloudops-cicd.yaml
+
+cloudops-cicd values:
+  releaseRecords.database.enabled=true
+  releaseRecords.postgres.enabled=true
+  releaseRecords.postgres.storageClassName=longhorn
+  releaseRecords.postgres.storageSize=5Gi
+
+生成资源:
+  Secret/cloudops-cicd-postgres
+  Service/cloudops-cicd-postgres
+  StatefulSet/cloudops-cicd-postgres
+  PVC/data-cloudops-cicd-postgres-0
+
+可靠性策略:
+  Deployment 增加 wait-for-postgres initContainer
+  RELEASE_RECORD_DATABASE_URL 已配置时，cloudops-cicd 不再静默回退 memory
+  PostgreSQL 不可用时服务会重试连接并失败退出，避免多副本一致性验证出现假阳性
+```
+
+当前个人实验环境使用 PostgreSQL `trust` 认证，仅用于 `cloudops-dev` namespace 内部服务访问。后续生产化需要改为密码 Secret 或外部托管 PostgreSQL。
+
+部署后验证命令：
+
+```bash
+kubectl -n cloudops-dev get secret cloudops-cicd-postgres
+kubectl -n cloudops-dev get statefulset,pod,pvc,svc | grep cloudops-cicd-postgres
+
+kubectl -n cloudops-dev exec statefulset/cloudops-cicd-postgres -- \
+  psql -U cloudops_cicd -d cloudops_cicd -c '\dt'
+
+for i in $(seq 1 5); do
+  curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records | grep -o '"source":"[^"]*"'
+done
+
+for i in $(seq 1 5); do
+  curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records/latest | grep -o '"id":"[^"]*"'
+done
+
+for i in $(seq 1 5); do
+  curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/rollback-candidates | grep -o '"total":[0-9]*'
+done
+```
+
 实时返回应用：
 
 ```text

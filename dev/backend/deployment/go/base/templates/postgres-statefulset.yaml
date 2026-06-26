@@ -1,0 +1,82 @@
+{{- if .Values.releaseRecords.postgres.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.releaseRecords.postgres.serviceName }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-go.labels" . | indent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ .Values.releaseRecords.postgres.serviceName }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.releaseRecords.postgres.serviceName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.releaseRecords.postgres.serviceName }}
+        env: {{ .Values.base.envName }}
+        app.kubernetes.io/name: {{ .Values.releaseRecords.postgres.serviceName }}
+        app.kubernetes.io/part-of: cloudops
+        app.kubernetes.io/component: postgres
+        app.kubernetes.io/managed-by: argocd
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.releaseRecords.postgres.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.releaseRecords.postgres.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.releaseRecords.postgres.username | quote }}
+            - name: POSTGRES_HOST_AUTH_METHOD
+              value: "trust"
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+{{ toYaml .Values.releaseRecords.postgres.resources | indent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.releaseRecords.postgres.username | quote }}
+                - -d
+                - {{ .Values.releaseRecords.postgres.database | quote }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.releaseRecords.postgres.username | quote }}
+                - -d
+                - {{ .Values.releaseRecords.postgres.database | quote }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+{{ include "cloudops-go.labels" . | indent 10 }}
+          app.kubernetes.io/component: postgres
+      spec:
+        accessModes:
+          - ReadWriteOnce
+{{- if .Values.releaseRecords.postgres.storageClassName }}
+        storageClassName: {{ .Values.releaseRecords.postgres.storageClassName }}
+{{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.releaseRecords.postgres.storageSize }}
+{{- end }}
