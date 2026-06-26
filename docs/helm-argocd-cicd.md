@@ -784,7 +784,6 @@ cloudops-cicd values:
   PVC/data-cloudops-cicd-postgres-0
 
 可靠性策略:
-  Deployment 增加 wait-for-postgres initContainer
   RELEASE_RECORD_DATABASE_URL 已配置时，cloudops-cicd 不再静默回退 memory
   PostgreSQL 不可用时服务会重试连接并失败退出，避免多副本一致性验证出现假阳性
 ```
@@ -811,6 +810,25 @@ done
 for i in $(seq 1 5); do
   curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/rollback-candidates | grep -o '"total":[0-9]*'
 done
+```
+
+PostgreSQL 持久化部署排障记录：
+
+```text
+现象:
+  cloudops-cicd-dev Synced 但 Degraded
+  PostgreSQL Secret / Service / StatefulSet / Pod / PVC 均已创建
+  release_records 表已创建
+  但一个 cloudops-cicd Pod 长期停在 Init:0/1
+
+原因:
+  wait-for-postgres initContainer 中的 pg_isready 循环卡住，导致新 ReplicaSet 不能完成 rollout
+  PostgreSQL 本身已正常，问题在 initContainer 阶段无法退出
+
+修复:
+  移除 wait-for-postgres initContainer
+  由 cloudops-cicd 应用自身负责 PostgreSQL 连接重试
+  RELEASE_RECORD_DATABASE_URL 已配置时，如果数据库不可用，应用会重试并失败退出，不再回退 memory
 ```
 
 实时返回应用：
