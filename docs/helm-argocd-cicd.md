@@ -330,7 +330,7 @@ operationState.phase = Error
 | 应用 | 类型 | Helm base | Argo CD Application | 当前镜像 tag |
 |---|---|---|---|---|
 | `cloudops-gateway` | Go backend | `dev/backend/deployment/go/base` | `cloudops-gateway-dev` | `main-14` |
-| `cloudops-cicd` | Go backend | `dev/backend/deployment/go/base` | `cloudops-cicd-dev` | `main-2` |
+| `cloudops-cicd` | Go backend | `dev/backend/deployment/go/base` | `cloudops-cicd-dev` | `main-3` |
 | `cloudops-web` | UI frontend | `dev/frontend/deployment/ui/base` | `cloudops-web-dev` | `main-8` |
 
 ## 9. 已验证结果
@@ -365,18 +365,19 @@ Service endpoint: https://cloudops.jianggan.cn/
 
 ### 9.3 cloudops-cicd
 
-第一版已创建静态 API 模型：
+第二版已接入 Argo CD API 实时状态：
 
 ```text
 Jenkins: test-cloudops-cicd-kaniko #1 SUCCESS
-Image: harbor-server.jianggan.cn/cloudops/cloudops-cicd:main-2
+Image: harbor-server.jianggan.cn/cloudops/cloudops-cicd:main-3
 Argo CD Application: cloudops-cicd-dev
 Helm base: dev/backend/deployment/go/base
 Helm values: values/cloudops-cicd.yaml
-Deployment image: harbor-server.jianggan.cn/cloudops/cloudops-cicd:main-2
+Deployment image: harbor-server.jianggan.cn/cloudops/cloudops-cicd:main-3
 Service endpoint: https://cloudops.jianggan.cn/api/v1/cicd/apps
 Metrics: cloudops_cicd_info
 Argo CD status: Synced / Healthy
+Data source: argocd
 ```
 
 第一版接口：
@@ -395,6 +396,16 @@ GET /api/v1/cicd/apps
 GET /api/v1/cicd/apps/cloudops-gateway
 GET /api/v1/cicd/apps/cloudops-gateway/status
 ```
+
+实时返回应用：
+
+```text
+cloudops-gateway: main-14 / Synced / Healthy / source=argocd
+cloudops-web: main-8 / Synced / Healthy / source=argocd
+cloudops-cicd: main-3 / Synced / Healthy / source=argocd
+```
+
+注意：`cloudops-cicd-argocd-token` 曾在对话中暴露，建议后续重新生成 Argo CD token 并轮换该 Secret。
 
 ### 9.4 最终状态检查
 
