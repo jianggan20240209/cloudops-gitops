@@ -800,17 +800,22 @@ kubectl -n cloudops-dev exec statefulset/cloudops-cicd-postgres -- \
   psql -U cloudops_cicd -d cloudops_cicd -c '\dt'
 
 for i in $(seq 1 5); do
-  curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records | grep -o '"source":"[^"]*"'
+  curl -sk https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records \
+    | python3 -c 'import json,sys; data=json.load(sys.stdin); print("top_source=" + data.get("source", "")); print("item_sources=" + ",".join(sorted(set(item.get("source", "") for item in data.get("items", [])))))'
 done
 
 for i in $(seq 1 5); do
-  curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records/latest | grep -o '"id":"[^"]*"'
+  curl -sk https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records/latest \
+    | python3 -c 'import json,sys; data=json.load(sys.stdin); print("id=" + data.get("id", "")); print("record_source=" + data.get("source", ""))'
 done
 
 for i in $(seq 1 5); do
-  curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/rollback-candidates | grep -o '"total":[0-9]*'
+  curl -sk https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/rollback-candidates \
+    | python3 -c 'import json,sys; data=json.load(sys.stdin); print("top_source=" + data.get("source", "")); print("total=" + str(data.get("total", 0)))'
 done
 ```
+
+注意：不要用 `grep -o '"source":"[^"]*"'` 判断 PostgreSQL 是否生效，因为响应 JSON 内存在多个层级的 `source` 字段，例如 `metrics.source=prometheus`、`items[].source=static/jenkins/app:...`、以及顶层 `source=postgres`。判断存储后端是否稳定，应只看响应顶层 `source`。
 
 PostgreSQL 持久化部署排障记录：
 
