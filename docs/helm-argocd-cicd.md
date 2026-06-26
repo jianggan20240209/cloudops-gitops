@@ -615,6 +615,40 @@ v6 当前实现边界：
   不变更 Kubernetes 运行态
 ```
 
+第六版实际验证结果：
+
+```text
+验证时间: 2026-06-26
+验证应用: cloudops-gateway
+验证接口:
+  GET /api/v1/cicd/apps/cloudops-gateway/records
+  GET /api/v1/cicd/apps/cloudops-gateway/records/latest
+  GET /api/v1/cicd/apps/cloudops-gateway/records/dev-cloudops-gateway-main-14
+
+发布记录:
+  id: dev-cloudops-gateway-main-14
+  jenkins_job: test-cloudops-gateway-kaniko
+  jenkins_build: 14
+  image: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+  image_digest: sha256:d30a2037366fd371e58fbf2d2b6543e4ee1cdeb3bc7016e6f1ad79eef745fe9b
+  argocd_app: cloudops-gateway-dev
+  argocd_revision: 52360c9023d546b4392be78a8511798fdc29a258
+  argocd_sync: Synced
+  argocd_health: Healthy
+  status: succeeded
+  source: app:argocd,images:harbor,metrics:prometheus
+  created_at: 2026-06-25T15:45:34.104Z
+
+验证结果:
+  ready: true
+  prometheus: up=2, targets=2, healthy=true
+  argocd_sync: pass
+  argocd_health: pass
+  image_tag: pass
+  harbor_image: pass
+  prometheus_up: pass
+```
+
 后续演进方向：
 
 ```text
