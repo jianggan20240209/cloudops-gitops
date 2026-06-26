@@ -774,6 +774,11 @@ cloudops-web / 返回前端 HTML 页面
    现象: go build 报 missing go.sum entry for module providing package github.com/lib/pq。
    原因: Dockerfile 只复制 go.mod 和 main.go，未复制 go.sum。
    修复: Dockerfile 改为 COPY go.mod go.sum ./，并在复制 main.go 前执行 go mod download。
+
+7. cloudops-cicd 执行 go mod download 访问 proxy.golang.org 超时。
+   现象: go mod download 报 dial tcp proxy.golang.org:443 i/o timeout。
+   原因: Kaniko Pod 有 HTTP_PROXY / HTTPS_PROXY，但 Dockerfile RUN 阶段没有自动继承这些环境变量。
+   修复: Dockerfile 声明 HTTP_PROXY / HTTPS_PROXY / NO_PROXY 等 build args，Jenkinsfile 调用 /kaniko/executor 时通过 --build-arg 显式传入代理变量。
 ```
 
 ## 10. 后续优化
