@@ -20,3 +20,12 @@ argocd:
   tokenSecret:
     name: cloudops-cicd-argocd-token
     key: token
+
+harbor:
+  enabled: true
+  server: https://harbor-server.jianggan.cn
+  insecure: "true"
+  credentialSecret:
+    name: cloudops-cicd-harbor-credential
+    usernameKey: username
+    passwordKey: password

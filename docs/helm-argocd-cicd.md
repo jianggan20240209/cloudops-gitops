@@ -248,6 +248,14 @@ jianggan-root-ca:
 argocd-auth-token:
   类型: Secret text
   用途: Jenkins 调用 Argo CD API
+
+cloudops-cicd-harbor-credential:
+  类型: Kubernetes Secret
+  命名空间: cloudops-dev
+  用途: cloudops-cicd 查询 Harbor 镜像 tag
+  字段:
+    username
+    password
 ```
 
 `argocd-auth-token` 应使用 Argo CD 账号生成的 API token。
@@ -387,6 +395,7 @@ GET /api/v1/cicd/apps
 GET /api/v1/cicd/apps/{name}
 GET /api/v1/cicd/apps/{name}/status
 GET /api/v1/cicd/apps/{name}/releases
+GET /api/v1/cicd/apps/{name}/images
 ```
 
 已验证接口：
@@ -396,6 +405,16 @@ GET /api/v1/cicd/apps
 GET /api/v1/cicd/apps/cloudops-gateway
 GET /api/v1/cicd/apps/cloudops-gateway/status
 ```
+
+第三版新增 Harbor 镜像 tag 查询：
+
+```text
+GET /api/v1/cicd/apps/cloudops-gateway/images
+GET /api/v1/cicd/apps/cloudops-web/images
+GET /api/v1/cicd/apps/cloudops-cicd/images
+```
+
+未配置 Harbor 凭据或查询失败时，接口会回退静态发布历史，并返回 `source=static` 和 `warning`。
 
 实时返回应用：
 
