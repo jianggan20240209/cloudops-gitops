@@ -738,6 +738,34 @@ argoproj.io/analysisruns
 
 验证 `/rollout` 和 `/analysisruns` 前，需要先重新运行 `test-cloudops-cicd-kaniko`，确保线上 `cloudops-cicd` 镜像已经包含新增应用清单和接口。若仍运行旧镜像，请求 `rollouts-demo-istio` 会返回 `app_not_found`。
 
+第十一版实际验证结果：
+
+```text
+验证时间: 2026-06-27
+验证应用: rollouts-demo-istio
+验证接口:
+  GET /api/v1/cicd/apps/rollouts-demo-istio/rollout
+  GET /api/v1/cicd/apps/rollouts-demo-istio/analysisruns
+  GET /api/v1/cicd/apps/rollouts-demo-istio/release
+
+Rollout:
+  phase: Healthy
+  current_step_index: 7
+  stable_rs: rollouts-demo-istio-676df55fd7
+  replicas: 2
+  updated_replicas: 2
+  available_replicas: 2
+  rollout_health: pass
+
+Prometheus:
+  up: 4
+  targets: 4
+  prometheus_up: pass
+
+发布结论:
+  ready: true
+```
+
 第七到第十版实际验证结果：
 
 ```text

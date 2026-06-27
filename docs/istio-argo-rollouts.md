@@ -270,6 +270,46 @@ up{namespace="<namespace>",service=~"<app-name>-(stable|canary)"}
 
 因此 `rollouts-demo-istio` 的 `/release` 会使用 stable/canary ServiceMonitor target 判断 `prometheus_up`。
 
+最终聚合验证结果：
+
+```text
+验证时间：2026-06-27
+验证接口:
+  GET /api/v1/cicd/apps/rollouts-demo-istio/release
+
+Argo CD:
+  sync: Synced
+  health: Healthy
+  revision: b2eae9111d44d44b160119bdfeb2f1e483472a5d
+
+Harbor:
+  current_tag: main-14
+  image digest: sha256:d30a2037366fd371e58fbf2d2b6543e4ee1cdeb3bc7016e6f1ad79eef745fe9b
+
+Prometheus:
+  up: 4
+  targets: 4
+  healthy: true
+
+Rollout:
+  phase: Healthy
+  stable_rs: rollouts-demo-istio-676df55fd7
+  replicas: 2
+  updated_replicas: 2
+  available_replicas: 2
+
+Checks:
+  argocd_sync: pass
+  argocd_health: pass
+  image_tag: pass
+  harbor_image: pass
+  prometheus_up: pass
+  rollout_health: pass
+
+结论:
+  ready: true
+```
+
 ## 后续
 
 - 将 `cloudops-gateway` 从 Deployment 迁移到 Rollout + Istio。
