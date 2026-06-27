@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rollouts-demo-istio-dev
+  namespace: argocd
+spec:
+  project: dev-platform
+  source:
+    repoURL: https://github.com/jianggan20240209/cloudops-gitops.git
+    targetRevision: main
+    path: dev/platform/rollouts/demo-istio
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudops-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

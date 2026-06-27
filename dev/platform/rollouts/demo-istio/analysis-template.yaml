@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: rollouts-demo-istio-prometheus
+  namespace: cloudops-dev
+  labels:
+    app: rollouts-demo-istio
+    env: dev
+    app.kubernetes.io/name: rollouts-demo-istio
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  args:
+    - name: service-name
+      value: rollouts-demo-istio
+  metrics:
+    - name: service-up
+      interval: 30s
+      count: 1
+      failureLimit: 1
+      successCondition: result[0] >= 1
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+          query: |
+            sum(up{job="{{args.service-name}}"})

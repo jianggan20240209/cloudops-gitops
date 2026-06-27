@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: rollouts-demo-istio
+  namespace: cloudops-dev
+  labels:
+    app: rollouts-demo-istio
+    env: dev
+    app.kubernetes.io/name: rollouts-demo-istio
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - istio-rollouts-demo.jianggan.cn

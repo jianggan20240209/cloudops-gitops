@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: rollouts-demo-istio
+  namespace: cloudops-dev
+  labels:
+    app: rollouts-demo-istio
+    env: dev
+    app.kubernetes.io/name: rollouts-demo-istio
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  hosts:
+    - istio-rollouts-demo.jianggan.cn
+  gateways:
+    - rollouts-demo-istio
+  http:
+    - name: primary
+      route:
+        - destination:
+            host: rollouts-demo-istio-stable
+            port:
+              number: 80
+          weight: 100
+        - destination:
+            host: rollouts-demo-istio-canary
+            port:
+              number: 80
+          weight: 0

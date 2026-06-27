@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rollouts-demo-istio-canary
+  namespace: cloudops-dev
+  labels:
+    app: rollouts-demo-istio
+    role: canary
+    env: dev
+    app.kubernetes.io/name: rollouts-demo-istio
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  type: ClusterIP
+  selector:
+    app: rollouts-demo-istio
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
