@@ -260,6 +260,16 @@ curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/rollouts-d
 
 应用存在同名 Rollout 时，`/release` 和 Release Record `verification` 会附带 `rollout` 摘要，并增加 `rollout_health` 检查项。
 
+对于 Istio / Rollout 应用，Prometheus 指标不一定存在 `job=<app-name>`。`cloudops-cicd` 会先查询 `up{job="<app-name>"}`，如果没有 target，会回退到：
+
+```text
+up{namespace="<namespace>",service="<app-name>"}
+or
+up{namespace="<namespace>",service=~"<app-name>-(stable|canary)"}
+```
+
+因此 `rollouts-demo-istio` 的 `/release` 会使用 stable/canary ServiceMonitor target 判断 `prometheus_up`。
+
 ## 后续
 
 - 将 `cloudops-gateway` 从 Deployment 迁移到 Rollout + Istio。
