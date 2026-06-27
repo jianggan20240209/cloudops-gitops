@@ -1,0 +1,84 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: cloudops-gateway-rollout
+  namespace: cloudops-dev
+  labels:
+    app: cloudops-gateway-rollout
+    env: dev
+    app.kubernetes.io/name: cloudops-gateway-rollout
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: cloudops-gateway-rollout
+  strategy:
+    canary:
+      stableService: cloudops-gateway-rollout-stable
+      canaryService: cloudops-gateway-rollout-canary
+      trafficRouting:
+        istio:
+          virtualService:
+            name: cloudops-gateway-rollout
+            routes:
+              - primary
+      steps:
+        - setWeight: 25
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: cloudops-gateway-rollout-prometheus
+            args:
+              - name: service-name
+                value: cloudops-gateway-rollout
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: cloudops-gateway-rollout-prometheus
+            args:
+              - name: service-name
+                value: cloudops-gateway-rollout
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: cloudops-gateway-rollout
+        env: dev
+        app.kubernetes.io/name: cloudops-gateway-rollout
+        app.kubernetes.io/part-of: cloudops
+        app.kubernetes.io/managed-by: argocd
+    spec:
+      imagePullSecrets:
+        - name: harbor-pull-secret
+      containers:
+        - name: cloudops-gateway-rollout
+          image: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi

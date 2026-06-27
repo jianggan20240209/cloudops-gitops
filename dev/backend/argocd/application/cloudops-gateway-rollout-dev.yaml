@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudops-gateway-rollout-dev
+  namespace: argocd
+spec:
+  project: dev-backend
+  source:
+    repoURL: https://github.com/jianggan20240209/cloudops-gitops.git
+    targetRevision: main
+    path: dev/backend/rollouts/cloudops-gateway
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudops-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

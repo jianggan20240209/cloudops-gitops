@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: cloudops-gateway-rollout-prometheus
+  namespace: cloudops-dev
+  labels:
+    app: cloudops-gateway-rollout
+    env: dev
+    app.kubernetes.io/name: cloudops-gateway-rollout
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  args:
+    - name: service-name
+      value: cloudops-gateway-rollout
+  metrics:
+    - name: service-up
+      interval: 30s
+      count: 3
+      failureLimit: 3
+      successCondition: result[0] >= 1
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+          query: |
+            sum(up{namespace="cloudops-dev",service=~"{{args.service-name}}-(stable|canary)"}) OR on() vector(0)

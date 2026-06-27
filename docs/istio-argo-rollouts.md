@@ -312,5 +312,6 @@ Checks:
 
 ## 后续
 
-- 将 `cloudops-gateway` 从 Deployment 迁移到 Rollout + Istio。
+- 已新增 `cloudops-gateway-rollout` 并行灰度版本，用于验证真实服务 Rollout + Istio。
+- 后续根据验证结果评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio。
 - 设计 tenant/header 路由灰度作为企业生产场景增强能力。
