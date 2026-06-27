@@ -14,7 +14,7 @@
 ## 版本
 
 ```text
-Istio: 1.23.4
+Istio: 1.30.2
 Argo Rollouts: 1.9.0
 ```
 
