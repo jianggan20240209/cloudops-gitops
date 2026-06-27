@@ -164,6 +164,37 @@ steps:
 
 后续可以通过 GitOps 修改 `dev/platform/rollouts/demo/rollout.yaml` 中的镜像 tag 触发 canary。
 
+## Canary 变更验证结果
+
+验证时间：2026-06-27
+
+本次通过修改 `rollouts-demo` 镜像 tag 触发了一次真实 canary 变更，Dashboard 已观察到 canary 阶段推进。
+
+阶段观察：
+
+```text
+Revision 3:
+  canary weight: 25
+  new ReplicaSet: rollouts-demo-7dd7d49744
+  old ReplicaSet: rollouts-demo-5c8599cb49
+  状态: 新版本开始接管流量，旧版本仍保留 Pod
+
+Revision 3:
+  canary weight: 100
+  new ReplicaSet: rollouts-demo-7dd7d49744
+  old ReplicaSet: rollouts-demo-5c8599cb49
+  状态: 新版本完成发布，旧版本缩容到 No Pods
+```
+
+验证结论：
+
+```text
+Argo Rollouts Controller 工作正常
+Dashboard 可正确展示 canary 权重和 ReplicaSet 状态
+rollouts-demo 已完成从旧 Revision 到新 Revision 的 canary 发布
+当前 demo canary 基于固定步骤推进，尚未接入 Prometheus AnalysisTemplate
+```
+
 ## 后续计划
 
 - 为 `rollouts-demo` 增加 Prometheus `AnalysisTemplate`。
