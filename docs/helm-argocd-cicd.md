@@ -736,6 +736,8 @@ argoproj.io/rollouts
 argoproj.io/analysisruns
 ```
 
+验证 `/rollout` 和 `/analysisruns` 前，需要先重新运行 `test-cloudops-cicd-kaniko`，确保线上 `cloudops-cicd` 镜像已经包含新增应用清单和接口。若仍运行旧镜像，请求 `rollouts-demo-istio` 会返回 `app_not_found`。
+
 第七到第十版实际验证结果：
 
 ```text

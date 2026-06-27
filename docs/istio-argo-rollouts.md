@@ -250,6 +250,8 @@ rollouts-demo-istio 已完成一次精确流量灰度发布
 
 `cloudops-cicd` 已接入 Kubernetes API，可以读取 Rollout / AnalysisRun 状态：
 
+验证前置条件：必须先重新运行 `test-cloudops-cicd-kaniko`，让线上 `cloudops-cicd` 镜像包含 `rollouts-demo-istio` 应用清单和 `/rollout`、`/analysisruns` 新接口。否则旧版本会返回 `app_not_found`。
+
 ```bash
 curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/rollouts-demo-istio/rollout
 curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/rollouts-demo-istio/analysisruns
