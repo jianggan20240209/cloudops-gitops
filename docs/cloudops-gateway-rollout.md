@@ -117,6 +117,54 @@ rollout_health: pass
 ready: true
 ```
 
+## 初始部署验证结果
+
+验证时间：2026-06-27
+
+Argo CD 和 Kubernetes 资源：
+
+```text
+cloudops-gateway-rollout-dev: Synced / Healthy
+rollout/cloudops-gateway-rollout: desired=2, current=2, up-to-date=2, available=2
+pod/cloudops-gateway-rollout-59ccd997fd-rcz6f: 1/1 Running
+pod/cloudops-gateway-rollout-59ccd997fd-vpmqc: 1/1 Running
+service/cloudops-gateway-rollout-stable: ClusterIP
+service/cloudops-gateway-rollout-canary: ClusterIP
+VirtualService host: istio-cloudops-gateway.jianggan.cn
+```
+
+Istio 入口验证：
+
+```text
+ingress gateway: 192.168.1.211
+GET /readyz: {"service":"cloudops-gateway","status":"ready"}
+GET /api/v1/version:
+  service: cloudops-gateway
+  version: main-14
+  commit: c308075261dc
+```
+
+VirtualService 初始权重：
+
+```text
+cloudops-gateway-rollout-stable:
+  weight: 100
+cloudops-gateway-rollout-canary:
+  weight: 0
+```
+
+发布中心验证注意事项：
+
+```text
+当前 /api/v1/cicd/apps/cloudops-gateway-rollout/release 返回 app_not_found，
+原因是线上 cloudops-cicd 还未重新构建部署到包含 cloudops-gateway-rollout 应用清单的新版本。
+
+处理方式:
+  重新运行 Jenkins test-cloudops-cicd-kaniko
+  等 Argo CD 同步 cloudops-cicd 新 imageTag
+  再执行发布中心验证命令
+```
+
 ## 后续
 
 - 验证 `cloudops-gateway-rollout` canary 完成。
