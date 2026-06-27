@@ -246,8 +246,19 @@ Prometheus AnalysisTemplate 修复后不再因为 no data 中止
 rollouts-demo-istio 已完成一次精确流量灰度发布
 ```
 
+## cloudops-cicd 查询接口
+
+`cloudops-cicd` 已接入 Kubernetes API，可以读取 Rollout / AnalysisRun 状态：
+
+```bash
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/rollouts-demo-istio/rollout
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/rollouts-demo-istio/analysisruns
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/rollouts-demo-istio/release
+```
+
+应用存在同名 Rollout 时，`/release` 和 Release Record `verification` 会附带 `rollout` 摘要，并增加 `rollout_health` 检查项。
+
 ## 后续
 
-- 让 `cloudops-cicd` 读取 Rollout / AnalysisRun 状态并写入 Release Record。
 - 将 `cloudops-gateway` 从 Deployment 迁移到 Rollout + Istio。
 - 设计 tenant/header 路由灰度作为企业生产场景增强能力。

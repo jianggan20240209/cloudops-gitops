@@ -15,6 +15,9 @@ spec:
       labels:
 {{ include "cloudops-go.labels" . | indent 8 }}
     spec:
+{{- if .Values.kubernetes.enabled }}
+      serviceAccountName: {{ .Values.kubernetes.serviceAccountName }}
+{{- end }}
       imagePullSecrets:
         - name: harbor-pull-secret
       containers:

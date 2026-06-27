@@ -34,6 +34,10 @@ prometheus:
   enabled: true
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
 
+kubernetes:
+  enabled: true
+  serviceAccountName: cloudops-cicd
+
 releaseRecords:
   database:
     enabled: true

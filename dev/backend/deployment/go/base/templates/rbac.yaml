@@ -1,0 +1,43 @@
+{{- if .Values.kubernetes.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.kubernetes.serviceAccountName }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-go.labels" . | indent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "cloudops-go.name" . }}-rollouts-reader
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-go.labels" . | indent 4 }}
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - rollouts
+      - analysisruns
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "cloudops-go.name" . }}-rollouts-reader
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-go.labels" . | indent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.kubernetes.serviceAccountName }}
+    namespace: {{ .Values.base.namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "cloudops-go.name" . }}-rollouts-reader
+{{- end }}

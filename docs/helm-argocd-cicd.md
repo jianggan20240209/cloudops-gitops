@@ -670,6 +670,12 @@ v10:
   新增 GET /api/v1/cicd/apps/{name}/rollback-candidates
   从 Release Record 中筛选 status=succeeded 且 verification.ready=true 的历史版本
   排除当前运行 imageTag，仅提供候选版本查询，不触发实际回滚
+
+v11:
+  新增 GET /api/v1/cicd/apps/{name}/rollout
+  新增 GET /api/v1/cicd/apps/{name}/analysisruns
+  cloudops-cicd 通过 Kubernetes API 读取 Rollout / AnalysisRun 状态
+  应用存在同名 Rollout 时，/release 和 Release Record verification 会附带 rollout 摘要
 ```
 
 新增接口：
@@ -677,6 +683,8 @@ v10:
 ```text
 POST /api/v1/cicd/releases/records
 GET /api/v1/cicd/apps/{name}/rollback-candidates
+GET /api/v1/cicd/apps/{name}/rollout
+GET /api/v1/cicd/apps/{name}/analysisruns
 ```
 
 发布记录存储策略：
@@ -711,6 +719,21 @@ releaseRecords:
     tokenSecret:
       name: cloudops-cicd-release-record-token
       key: token
+```
+
+Kubernetes Rollout 读取权限：
+
+```yaml
+kubernetes:
+  enabled: true
+  serviceAccountName: cloudops-cicd
+```
+
+Helm 会为 `cloudops-cicd` 创建 ServiceAccount、Role、RoleBinding，仅允许在 `cloudops-dev` 命名空间读取：
+
+```text
+argoproj.io/rollouts
+argoproj.io/analysisruns
 ```
 
 第七到第十版实际验证结果：
