@@ -153,20 +153,51 @@ cloudops-gateway-rollout-canary:
   weight: 0
 ```
 
-发布中心验证注意事项：
+发布中心聚合验证结果：
 
 ```text
-当前 /api/v1/cicd/apps/cloudops-gateway-rollout/release 返回 app_not_found，
-原因是线上 cloudops-cicd 还未重新构建部署到包含 cloudops-gateway-rollout 应用清单的新版本。
+验证接口:
+  GET /api/v1/cicd/apps/cloudops-gateway-rollout/release
 
-处理方式:
-  重新运行 Jenkins test-cloudops-cicd-kaniko
-  等 Argo CD 同步 cloudops-cicd 新 imageTag
-  再执行发布中心验证命令
+Argo CD:
+  sync: Synced
+  health: Healthy
+  revision: f62a87e585051bb005cca26bd3f93c40dfbc7c7a
+
+Harbor:
+  current_tag: main-14
+  image digest: sha256:d30a2037366fd371e58fbf2d2b6543e4ee1cdeb3bc7016e6f1ad79eef745fe9b
+
+Prometheus:
+  up: 4
+  targets: 4
+  healthy: true
+
+Rollout:
+  phase: Healthy
+  stable_rs: cloudops-gateway-rollout-59ccd997fd
+  replicas: 2
+  updated_replicas: 2
+  available_replicas: 2
+
+Checks:
+  argocd_sync: pass
+  argocd_health: pass
+  image_tag: pass
+  harbor_image: pass
+  prometheus_up: pass
+  rollout_health: pass
+
+VirtualService:
+  stable weight: 100
+  canary weight: 0
+
+结论:
+  ready: true
 ```
 
 ## 后续
 
-- 验证 `cloudops-gateway-rollout` canary 完成。
+- 触发 `cloudops-gateway-rollout` canary 变更并观察 25% / 50% / 100% 阶段。
 - 将 `cloudops-cicd` Release Record 增加 Rollout 阶段事件持久化。
 - 评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio 模式。
