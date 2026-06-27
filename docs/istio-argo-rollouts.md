@@ -156,7 +156,7 @@ kubectl -n cloudops-dev get servicemonitor rollouts-demo-istio
 kubectl -n monitoring run curl-prom-rollouts-demo-istio-query \
   --rm -i --restart=Never \
   --image=curlimages/curl:8.16.0 \
-  -- curl -s 'http://kube-prometheus-stack-prometheus:9090/api/v1/query?query=sum(up%7Bjob%3D%22rollouts-demo-istio%22%7D)'
+  -- curl -s 'http://kube-prometheus-stack-prometheus:9090/api/v1/query?query=sum(up%7Bnamespace%3D%22cloudops-dev%22%2Cservice%3D~%22rollouts-demo-istio-%28stable%7Ccanary%29%22%7D)%20OR%20on()%20vector(0)'
 ```
 
 触发 canary 后观察：
@@ -166,6 +166,35 @@ kubectl -n cloudops-dev get rollout rollouts-demo-istio -w
 kubectl -n cloudops-dev get analysisrun -w
 kubectl -n cloudops-dev get rs -l app=rollouts-demo-istio -w
 kubectl -n cloudops-dev get pod -l app=rollouts-demo-istio -w
+```
+
+## AnalysisRun 故障记录
+
+首次触发 `rollouts-demo-istio` canary 时，Rollout 能进入 25% 阶段，但随后被 AnalysisRun 中止：
+
+```text
+RolloutAborted: Step-based analysis phase error/failed
+Metric "service-up" assessed Error due to consecutiveErrors
+Error Message: could not evaluate successCondition "result[0] >= 1":
+metric result is nil or empty: no data returned from the metric provider
+```
+
+原因：
+
+```text
+AnalysisTemplate 使用 sum(up{job="rollouts-demo-istio"})
+Prometheus 中该 job label 没有匹配到序列
+sum() 对空向量返回空结果，导致 result[0] 不存在
+```
+
+修复：
+
+```text
+改为按 ServiceMonitor 生成的 service 标签查询 stable / canary Service：
+sum(up{namespace="cloudops-dev",service=~"rollouts-demo-istio-(stable|canary)"}) OR on() vector(0)
+
+OR on() vector(0) 用于保证无数据时返回 0，而不是空数组。
+同时将 count 调整为 3、failureLimit 调整为 3，避免 target 刚创建或 Prometheus 尚未 scrape 时误判。
 ```
 
 ## 后续
