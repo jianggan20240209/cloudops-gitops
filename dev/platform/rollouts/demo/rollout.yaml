@@ -21,9 +21,21 @@ spec:
         - setWeight: 25
         - pause:
             duration: 60s
+        - analysis:
+            templates:
+              - templateName: rollouts-demo-prometheus
+            args:
+              - name: service-name
+                value: rollouts-demo
         - setWeight: 50
         - pause:
             duration: 60s
+        - analysis:
+            templates:
+              - templateName: rollouts-demo-prometheus
+            args:
+              - name: service-name
+                value: rollouts-demo
         - setWeight: 100
   template:
     metadata:

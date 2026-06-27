@@ -1,0 +1,23 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rollouts-demo
+  namespace: cloudops-dev
+  labels:
+    release: kube-prometheus-stack
+    app: rollouts-demo
+    env: dev
+    app.kubernetes.io/name: rollouts-demo
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  selector:
+    matchLabels:
+      app: rollouts-demo
+  namespaceSelector:
+    matchNames:
+      - cloudops-dev
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

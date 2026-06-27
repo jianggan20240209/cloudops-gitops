@@ -156,13 +156,79 @@ steps:
   - setWeight: 25
   - pause:
       duration: 60s
+  - analysis:
+      templates:
+        - templateName: rollouts-demo-prometheus
   - setWeight: 50
   - pause:
       duration: 60s
+  - analysis:
+      templates:
+        - templateName: rollouts-demo-prometheus
   - setWeight: 100
 ```
 
 后续可以通过 GitOps 修改 `dev/platform/rollouts/demo/rollout.yaml` 中的镜像 tag 触发 canary。
+
+## Prometheus AnalysisTemplate
+
+本阶段在通用流量比例灰度基础上增加 Prometheus 指标判断。`rollouts-demo` 会继续使用 25% -> 50% -> 100% 的 canary 流程，但在 25% 和 50% 阶段后各执行一次 AnalysisRun。
+
+新增资源：
+
+```text
+dev/platform/rollouts/demo/analysis-template.yaml
+dev/platform/rollouts/demo/servicemonitor.yaml
+```
+
+ServiceMonitor：
+
+```text
+name: rollouts-demo
+namespace: cloudops-dev
+path: /metrics
+port: http
+interval: 30s
+```
+
+AnalysisTemplate：
+
+```text
+name: rollouts-demo-prometheus
+provider: prometheus
+address: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+query: sum(up{job="rollouts-demo"})
+successCondition: result[0] >= 1
+failureLimit: 1
+```
+
+部署后先确认 Prometheus target：
+
+```bash
+kubectl -n cloudops-dev get servicemonitor rollouts-demo
+
+kubectl -n monitoring run curl-prom-rollouts-demo-query \
+  --rm -i --restart=Never \
+  --image=curlimages/curl:8.16.0 \
+  -- curl -s 'http://kube-prometheus-stack-prometheus:9090/api/v1/query?query=sum(up%7Bjob%3D%22rollouts-demo%22%7D)'
+```
+
+触发下一次 canary 后观察：
+
+```bash
+kubectl -n cloudops-dev get rollout rollouts-demo -w
+kubectl -n cloudops-dev get analysisrun -w
+kubectl -n cloudops-dev describe analysisrun
+```
+
+预期：
+
+```text
+25% 阶段后生成 AnalysisRun
+AnalysisRun Successful 后进入 50%
+50% 阶段后再次生成 AnalysisRun
+第二次 AnalysisRun Successful 后进入 100%
+```
 
 ## Canary 变更验证结果
 
