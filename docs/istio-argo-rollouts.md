@@ -197,9 +197,57 @@ OR on() vector(0) 用于保证无数据时返回 0，而不是空数组。
 同时将 count 调整为 3、failureLimit 调整为 3，避免 target 刚创建或 Prometheus 尚未 scrape 时误判。
 ```
 
+## Istio 精确灰度验证结果
+
+验证时间：2026-06-27
+
+本次通过 GitOps 修改 `rollouts-demo-istio` 镜像 tag，触发了一次 Argo Rollouts + Istio 的精确流量灰度。修复 Prometheus 查询后，新 Revision 已完成发布。
+
+Rollout 状态：
+
+```text
+rollouts-demo-istio:
+  desired: 2
+  current: 2
+  up-to-date: 2
+  available: 2
+
+Conditions:
+  Completed: True / RolloutCompleted
+  Healthy: True / RolloutHealthy
+  Available: True / AvailableReason
+  Progressing: True / NewReplicaSetAvailable
+
+stable ReplicaSet:
+  rollouts-demo-istio-676df55fd7
+  desired/current/ready: 2/2/2
+
+old ReplicaSet:
+  rollouts-demo-istio-78c58557d
+  desired/current/ready: 0/0/0
+```
+
+Istio `VirtualService` 最终权重：
+
+```text
+rollouts-demo-istio-stable:
+  weight: 100
+
+rollouts-demo-istio-canary:
+  weight: 0
+```
+
+验证结论：
+
+```text
+Istio ingressgateway 访问链路正常
+Argo Rollouts 能通过 Istio VirtualService 控制 stable / canary 权重
+Prometheus AnalysisTemplate 修复后不再因为 no data 中止
+rollouts-demo-istio 已完成一次精确流量灰度发布
+```
+
 ## 后续
 
-- 验证 `rollouts-demo-istio` 在 25%、50%、100% 阶段的 VirtualService 权重变化。
 - 让 `cloudops-cicd` 读取 Rollout / AnalysisRun 状态并写入 Release Record。
 - 将 `cloudops-gateway` 从 Deployment 迁移到 Rollout + Istio。
 - 设计 tenant/header 路由灰度作为企业生产场景增强能力。
