@@ -299,6 +299,7 @@ cloudops-gateway-rollout 真实服务 canary 验证完成
 - 正式迁移入口前，先执行 `docs/cloudops-gateway-cutover-runbook.md` 中的 Go / No-Go 检查。
 - Dry Run 评审记录见 `docs/cloudops-gateway-cutover-dry-run.md`。
 - Header / Tenant 精准灰度演练见 `docs/cloudops-gateway-header-tenant-canary.md`。
+- timeout / retry / circuit breaker 流量治理实验见 `docs/cloudops-gateway-traffic-policy.md`。
 - 按 Runbook 评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio 模式。
 
 ## Release Record 快照

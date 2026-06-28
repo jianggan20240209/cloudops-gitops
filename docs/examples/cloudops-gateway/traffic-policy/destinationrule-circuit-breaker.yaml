@@ -1,0 +1,61 @@
+# Example only. This manifest is not referenced by Argo CD.
+# Apply manually only after reviewing current Rollout and Service state.
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: cloudops-gateway-rollout
+  namespace: cloudops-dev
+  labels:
+    app: cloudops-gateway-rollout
+    env: dev
+    app.kubernetes.io/name: cloudops-gateway-rollout
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  host: cloudops-gateway-rollout-stable
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 50
+  subsets:
+    - name: stable
+      labels:
+        app: cloudops-gateway-rollout
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: cloudops-gateway-rollout-canary
+  namespace: cloudops-dev
+  labels:
+    app: cloudops-gateway-rollout
+    env: dev
+    app.kubernetes.io/name: cloudops-gateway-rollout
+    app.kubernetes.io/part-of: cloudops
+    app.kubernetes.io/managed-by: argocd
+spec:
+  host: cloudops-gateway-rollout-canary
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 50
+  subsets:
+    - name: canary
+      labels:
+        app: cloudops-gateway-rollout
