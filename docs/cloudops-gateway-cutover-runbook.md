@@ -22,6 +22,12 @@
 
 本 Runbook 只描述迁移方案和回退方案，不直接修改当前入口。
 
+正式切换前的 Dry Run 评审记录见：
+
+```text
+docs/cloudops-gateway-cutover-dry-run.md
+```
+
 ## 已完成前置验证
 
 ```text
