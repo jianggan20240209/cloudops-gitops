@@ -186,3 +186,10 @@ Dry Run 结论:
   前端 / 路由边界
   DNS/LB 回退确认
 ```
+
+补充说明：
+
+```text
+Header / Tenant 精准灰度设计已补充到 docs/cloudops-gateway-header-tenant-canary.md。
+该能力用于测试租户、指定生产租户或测试人员精准命中 canary，不替代正式入口切换 Runbook。
+```

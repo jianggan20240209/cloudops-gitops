@@ -314,4 +314,4 @@ Checks:
 
 - 已新增 `cloudops-gateway-rollout` 并行灰度版本，并完成真实服务 canary 验证。
 - 正式切换入口前，执行 `docs/cloudops-gateway-cutover-runbook.md`。
-- 设计 tenant/header 路由灰度作为企业生产场景增强能力。
+- Header / Tenant 灰度设计见 `docs/cloudops-gateway-header-tenant-canary.md`。
