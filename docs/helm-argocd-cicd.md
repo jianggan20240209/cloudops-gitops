@@ -745,6 +745,30 @@ argoproj.io/analysisruns
 
 验证 `/rollout` 和 `/analysisruns` 前，需要先重新运行 `test-cloudops-cicd-kaniko`，确保线上 `cloudops-cicd` 镜像已经包含新增应用清单和接口。若仍运行旧镜像，请求 `rollouts-demo-istio` 会返回 `app_not_found`。
 
+第十二版实际验证结果：
+
+```text
+验证时间: 2026-06-28
+验证应用: cloudops-gateway-rollout
+验证接口:
+  POST /api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot
+
+快照记录:
+  id: dev-cloudops-gateway-rollout-main-13-snapshot-20260625154014
+  image_tag: main-13
+  status: succeeded
+  source: snapshot
+
+持久化内容:
+  Argo CD: Synced / Healthy
+  Harbor digest: sha256:4bc42510716fe90859015a14738d3b8c1e26cfe76c81ce95c5d64f0509c13a01
+  Prometheus: up=4, targets=4, healthy=true
+  Rollout: Healthy, stable_rs=cloudops-gateway-rollout-75464d5c7f
+  AnalysisRun:
+    cloudops-gateway-rollout-75464d5c7f-2-2: Successful
+    cloudops-gateway-rollout-75464d5c7f-2-5: Successful
+```
+
 第十一版实际验证结果：
 
 ```text

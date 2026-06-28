@@ -278,3 +278,54 @@ ready / checks
 ```
 
 快照 ID 会追加时间戳，避免覆盖同一个 imageTag 的基础记录。
+
+快照写入验证结果：
+
+```text
+验证时间：2026-06-28
+验证接口:
+  POST /api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot
+
+快照记录:
+  id: dev-cloudops-gateway-rollout-main-13-snapshot-20260625154014
+  app_name: cloudops-gateway-rollout
+  image_tag: main-13
+  jenkins_build: 13
+  status: succeeded
+  source: snapshot
+
+Argo CD:
+  sync: Synced
+  health: Healthy
+  revision: 77d7a9bbcc13de15c1b8acaed7f774f19fe4229d
+
+Harbor:
+  digest: sha256:4bc42510716fe90859015a14738d3b8c1e26cfe76c81ce95c5d64f0509c13a01
+
+Prometheus:
+  up: 4
+  targets: 4
+  healthy: true
+
+Rollout:
+  phase: Healthy
+  stable_rs: cloudops-gateway-rollout-75464d5c7f
+  replicas: 2
+  updated_replicas: 2
+  available_replicas: 2
+
+AnalysisRun:
+  cloudops-gateway-rollout-75464d5c7f-2-2: Successful
+  cloudops-gateway-rollout-75464d5c7f-2-5: Successful
+
+Checks:
+  argocd_sync: pass
+  argocd_health: pass
+  image_tag: pass
+  harbor_image: pass
+  prometheus_up: pass
+  rollout_health: pass
+
+结论:
+  Release Record 快照写入成功
+```
