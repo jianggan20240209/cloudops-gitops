@@ -254,8 +254,8 @@ cloudops-gateway-rollout 真实服务 canary 验证完成
 
 ## 后续
 
-- 调用 `cloudops-cicd` Release Record snapshot 接口，将本次 Rollout / AnalysisRun 聚合结果持久化。
-- 评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio 模式。
+- 正式迁移入口前，先执行 `docs/cloudops-gateway-cutover-runbook.md` 中的 Go / No-Go 检查。
+- 按 Runbook 评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio 模式。
 
 ## Release Record 快照
 
