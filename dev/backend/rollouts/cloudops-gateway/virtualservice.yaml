@@ -12,6 +12,7 @@ metadata:
 spec:
   hosts:
     - istio-cloudops-gateway.jianggan.cn
+    - api.cloudops.jianggan.cn
   gateways:
     - cloudops-gateway-rollout
   http:

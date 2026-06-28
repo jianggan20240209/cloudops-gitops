@@ -140,6 +140,13 @@ cloudops.jianggan.cn 当前同时承载:
   前端 / 路由继续由 NGINX 处理
 ```
 
+当前执行状态：
+
+```text
+已按方案 A 新增 api.cloudops.jianggan.cn 的 Gateway / VirtualService / Certificate 配置。
+仍需在 DNS 中将 api.cloudops.jianggan.cn 解析到 istio-ingressgateway LoadBalancer IP 后验证。
+```
+
 暂不推荐：
 
 ```text

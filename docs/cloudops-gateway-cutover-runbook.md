@@ -146,6 +146,71 @@ Route:
 
 当前个人实验建议优先使用方案 A 或 C，避免影响前端。
 
+## 方案 A 落地配置
+
+已为 `cloudops-gateway-rollout` 增加 API 独立域名：
+
+```text
+api.cloudops.jianggan.cn
+```
+
+GitOps 清单：
+
+```text
+dev/backend/rollouts/cloudops-gateway/certificate-api.yaml
+dev/backend/rollouts/cloudops-gateway/gateway.yaml
+dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
+```
+
+配置内容：
+
+```text
+Certificate:
+  api-cloudops-jianggan-cn
+  secretName: api-cloudops-jianggan-cn-tls
+  issuer: jianggan-ca-issuer
+
+Gateway:
+  HTTP 80:
+    istio-cloudops-gateway.jianggan.cn
+    api.cloudops.jianggan.cn
+  HTTPS 443:
+    api.cloudops.jianggan.cn
+    credentialName: api-cloudops-jianggan-cn-tls
+
+VirtualService:
+  hosts:
+    istio-cloudops-gateway.jianggan.cn
+    api.cloudops.jianggan.cn
+  route:
+    cloudops-gateway-rollout-stable weight 100
+    cloudops-gateway-rollout-canary weight 0
+```
+
+DNS：
+
+```text
+api.cloudops.jianggan.cn -> istio-ingressgateway LoadBalancer IP
+```
+
+验证：
+
+```bash
+ISTIO_LB_IP="$(kubectl -n istio-ingress get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+
+curl -H "Host: api.cloudops.jianggan.cn" http://${ISTIO_LB_IP}/readyz
+curl -H "Host: api.cloudops.jianggan.cn" http://${ISTIO_LB_IP}/api/v1/version
+
+curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/readyz
+curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/api/v1/version
+```
+
+方案 A 回退：
+
+```text
+将 api.cloudops.jianggan.cn DNS 解析回原 NGINX Ingress / 原 API 入口，或直接移除该域名解析。
+```
+
 ### 阶段 3：正式切流
 
 如果使用独立 API 域名：

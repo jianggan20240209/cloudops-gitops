@@ -10,6 +10,7 @@
 - 不影响当前 `https://cloudops.jianggan.cn/api` 入口。
 - 新增独立 Rollout 应用 `cloudops-gateway-rollout-dev`。
 - 使用独立域名 `istio-cloudops-gateway.jianggan.cn` 验证流量治理。
+- 使用 API 独立域名 `api.cloudops.jianggan.cn` 承接方案 A 切换验证。
 
 ## GitOps 目录
 
@@ -17,6 +18,7 @@
 dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
 
 dev/backend/rollouts/cloudops-gateway/
+  certificate-api.yaml
   rollout.yaml
   service-stable.yaml
   service-canary.yaml
@@ -60,11 +62,23 @@ kubectl -n istio-ingress get svc istio-ingressgateway
 
 将 `istio-cloudops-gateway.jianggan.cn` 解析到 Istio ingress gateway 的 LoadBalancer IP。
 
+方案 A API 域名：
+
+```text
+api.cloudops.jianggan.cn -> Istio ingress gateway LoadBalancer IP
+```
+
 ## 验证入口
 
 ```bash
 curl -H "Host: istio-cloudops-gateway.jianggan.cn" http://<istio-ingressgateway-ip>/readyz
 curl -H "Host: istio-cloudops-gateway.jianggan.cn" http://<istio-ingressgateway-ip>/api/v1/version
+
+curl -H "Host: api.cloudops.jianggan.cn" http://<istio-ingressgateway-ip>/readyz
+curl -H "Host: api.cloudops.jianggan.cn" http://<istio-ingressgateway-ip>/api/v1/version
+
+curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/readyz
+curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/api/v1/version
 ```
 
 ## 验证 Prometheus

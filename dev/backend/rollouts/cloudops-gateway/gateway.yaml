@@ -19,3 +19,13 @@ spec:
         protocol: HTTP
       hosts:
         - istio-cloudops-gateway.jianggan.cn
+        - api.cloudops.jianggan.cn
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: api-cloudops-jianggan-cn-tls
+      hosts:
+        - api.cloudops.jianggan.cn
