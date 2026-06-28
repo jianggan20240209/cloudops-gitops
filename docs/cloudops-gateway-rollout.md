@@ -16,9 +16,10 @@
 
 ```text
 dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
+dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
+dev/platform/istio/api-cloudops-certificate/certificate.yaml
 
 dev/backend/rollouts/cloudops-gateway/
-  certificate-api.yaml
   rollout.yaml
   service-stable.yaml
   service-canary.yaml
@@ -68,9 +69,21 @@ kubectl -n istio-ingress get svc istio-ingressgateway
 api.cloudops.jianggan.cn -> Istio ingress gateway LoadBalancer IP
 ```
 
+HTTPS 证书：
+
+```text
+Certificate namespace: istio-ingress
+Secret: api-cloudops-jianggan-cn-tls
+```
+
+Istio ingress gateway 会在 `istio-ingress` 命名空间读取 `credentialName: api-cloudops-jianggan-cn-tls`，因此证书 Secret 必须生成在 `istio-ingress`。
+
 ## 验证入口
 
 ```bash
+kubectl apply -f dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
+kubectl -n istio-ingress get secret api-cloudops-jianggan-cn-tls
+
 curl -H "Host: istio-cloudops-gateway.jianggan.cn" http://<istio-ingressgateway-ip>/readyz
 curl -H "Host: istio-cloudops-gateway.jianggan.cn" http://<istio-ingressgateway-ip>/api/v1/version
 

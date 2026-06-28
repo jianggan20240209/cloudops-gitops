@@ -144,7 +144,8 @@ cloudops.jianggan.cn 当前同时承载:
 
 ```text
 已按方案 A 新增 api.cloudops.jianggan.cn 的 Gateway / VirtualService / Certificate 配置。
-仍需在 DNS 中将 api.cloudops.jianggan.cn 解析到 istio-ingressgateway LoadBalancer IP 后验证。
+已修正 Certificate 到 istio-ingress 命名空间，确保 istio-ingressgateway 能读取 TLS Secret。
+仍需在 DNS 中将 api.cloudops.jianggan.cn 解析到 istio-ingressgateway LoadBalancer IP 后验证 HTTPS。
 ```
 
 暂不推荐：

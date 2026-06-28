@@ -2,7 +2,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: api-cloudops-jianggan-cn
-  namespace: cloudops-dev
+  namespace: istio-ingress
   labels:
     app: cloudops-gateway-rollout
     env: dev

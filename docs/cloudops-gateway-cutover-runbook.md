@@ -157,7 +157,8 @@ api.cloudops.jianggan.cn
 GitOps 清单：
 
 ```text
-dev/backend/rollouts/cloudops-gateway/certificate-api.yaml
+dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
+dev/platform/istio/api-cloudops-certificate/certificate.yaml
 dev/backend/rollouts/cloudops-gateway/gateway.yaml
 dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
 ```
@@ -167,6 +168,7 @@ dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
 ```text
 Certificate:
   api-cloudops-jianggan-cn
+  namespace: istio-ingress
   secretName: api-cloudops-jianggan-cn-tls
   issuer: jianggan-ca-issuer
 
@@ -193,9 +195,15 @@ DNS：
 api.cloudops.jianggan.cn -> istio-ingressgateway LoadBalancer IP
 ```
 
+注意：Istio ingress gateway 的 TLS Secret 必须位于 gateway workload 所在命名空间 `istio-ingress`，因此 `api-cloudops-jianggan-cn-tls` 由 `api-cloudops-certificate-dev` Application 生成在 `istio-ingress`，而不是 `cloudops-dev`。
+
 验证：
 
 ```bash
+kubectl apply -f dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
+kubectl -n argocd get application api-cloudops-certificate-dev
+kubectl -n istio-ingress get secret api-cloudops-jianggan-cn-tls
+
 ISTIO_LB_IP="$(kubectl -n istio-ingress get svc istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
 
 curl -H "Host: api.cloudops.jianggan.cn" http://${ISTIO_LB_IP}/readyz
