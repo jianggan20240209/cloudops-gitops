@@ -676,6 +676,12 @@ v11:
   新增 GET /api/v1/cicd/apps/{name}/analysisruns
   cloudops-cicd 通过 Kubernetes API 读取 Rollout / AnalysisRun 状态
   应用存在同名 Rollout 时，/release 和 Release Record verification 会附带 rollout 摘要
+
+v12:
+  新增 POST /api/v1/cicd/apps/{name}/records/snapshot
+  将当前应用聚合结果保存为 Release Record 快照
+  快照包含 Argo CD、Harbor、Prometheus、Rollout、AnalysisRun 和 checks
+  快照 ID 追加时间戳，避免覆盖同 imageTag 的基础记录
 ```
 
 新增接口：
@@ -685,6 +691,7 @@ POST /api/v1/cicd/releases/records
 GET /api/v1/cicd/apps/{name}/rollback-candidates
 GET /api/v1/cicd/apps/{name}/rollout
 GET /api/v1/cicd/apps/{name}/analysisruns
+POST /api/v1/cicd/apps/{name}/records/snapshot
 ```
 
 发布记录存储策略：

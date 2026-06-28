@@ -254,5 +254,27 @@ cloudops-gateway-rollout 真实服务 canary 验证完成
 
 ## 后续
 
-- 将 `cloudops-cicd` Release Record 增加 Rollout 阶段事件持久化。
+- 调用 `cloudops-cicd` Release Record snapshot 接口，将本次 Rollout / AnalysisRun 聚合结果持久化。
 - 评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio 模式。
+
+## Release Record 快照
+
+灰度完成、失败或人工检查后，可以将当前聚合结果保存为 Release Record 快照：
+
+```bash
+curl --ssl-no-revoke -k -X POST \
+  https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot
+```
+
+快照内容包括：
+
+```text
+Argo CD sync / health / revision
+Harbor image tag / digest
+Prometheus up / targets / healthy
+Rollout phase / stableRS / conditions
+AnalysisRun phase / metricResults
+ready / checks
+```
+
+快照 ID 会追加时间戳，避免覆盖同一个 imageTag 的基础记录。
