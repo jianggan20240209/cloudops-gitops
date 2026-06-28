@@ -58,7 +58,7 @@ spec:
         - name: harbor-pull-secret
       containers:
         - name: cloudops-gateway-rollout
-          image: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-14
+          image: harbor-server.jianggan.cn/cloudops/cloudops-gateway:main-13
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
