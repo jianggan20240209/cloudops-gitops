@@ -196,8 +196,63 @@ VirtualService:
   ready: true
 ```
 
+## Canary 变更验证结果
+
+验证时间：2026-06-28
+
+本次通过修改 `cloudops-gateway-rollout` 镜像 tag，触发了一次真实服务的 Argo Rollouts + Istio 精确流量灰度。
+
+Rollout 阶段观察：
+
+```text
+初始:
+  desired/current/up-to-date/available: 2/2/2/2
+
+25% canary:
+  current: 3
+  up-to-date: 1
+  available: 3
+
+50% canary:
+  current: 4
+  up-to-date: 2
+  available: 4
+
+完成:
+  desired/current/up-to-date/available: 2/2/2/2
+```
+
+AnalysisRun：
+
+```text
+cloudops-gateway-rollout-75464d5c7f-2-2:
+  status: Successful
+  duration: 60s
+
+cloudops-gateway-rollout-75464d5c7f-2-5:
+  status: Successful
+  duration: 60s
+```
+
+VirtualService 最终权重：
+
+```text
+cloudops-gateway-rollout-stable:
+  weight: 100
+cloudops-gateway-rollout-canary:
+  weight: 0
+```
+
+验证结论：
+
+```text
+Argo Rollouts 能按 25% -> AnalysisRun -> 50% -> AnalysisRun -> 100% 推进真实服务灰度
+Prometheus AnalysisRun 两次均 Successful
+Istio VirtualService 最终回到 stable 100 / canary 0
+cloudops-gateway-rollout 真实服务 canary 验证完成
+```
+
 ## 后续
 
-- 触发 `cloudops-gateway-rollout` canary 变更并观察 25% / 50% / 100% 阶段。
 - 将 `cloudops-cicd` Release Record 增加 Rollout 阶段事件持久化。
 - 评估是否将原 `cloudops-gateway-dev` 替换为 Rollout + Istio 模式。
