@@ -213,6 +213,22 @@ curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/readyz
 curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/api/v1/version
 ```
 
+方案 A HTTPS 验证结果：
+
+```text
+验证时间: 2026-06-28
+GET https://api.cloudops.jianggan.cn/readyz:
+  {"service":"cloudops-gateway","status":"ready"}
+
+GET https://api.cloudops.jianggan.cn/api/v1/version:
+  service: cloudops-gateway
+  version: main-13
+  commit: dc166c601fb4
+
+结论:
+  api.cloudops.jianggan.cn -> istio-ingressgateway -> cloudops-gateway-rollout HTTPS 链路已打通
+```
+
 方案 A 回退：
 
 ```text

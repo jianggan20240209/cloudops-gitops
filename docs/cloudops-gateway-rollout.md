@@ -94,6 +94,21 @@ curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/readyz
 curl --ssl-no-revoke -k https://api.cloudops.jianggan.cn/api/v1/version
 ```
 
+方案 A HTTPS 验证结果：
+
+```text
+GET /readyz:
+  {"service":"cloudops-gateway","status":"ready"}
+
+GET /api/v1/version:
+  service: cloudops-gateway
+  version: main-13
+  commit: dc166c601fb4
+
+结论:
+  api.cloudops.jianggan.cn HTTPS 入口已正常路由到 cloudops-gateway-rollout
+```
+
 ## 验证 Prometheus
 
 ```bash
