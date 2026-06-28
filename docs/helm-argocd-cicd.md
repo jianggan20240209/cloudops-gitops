@@ -674,7 +674,9 @@ v10:
 v11:
   新增 GET /api/v1/cicd/apps/{name}/rollout
   新增 GET /api/v1/cicd/apps/{name}/analysisruns
+  新增 GET /api/v1/cicd/apps/{name}/traffic
   cloudops-cicd 通过 Kubernetes API 读取 Rollout / AnalysisRun 状态
+  cloudops-cicd 通过 Kubernetes API 读取 VirtualService / DestinationRule 摘要
   应用存在同名 Rollout 时，/release 和 Release Record verification 会附带 rollout 摘要
 
 v12:
@@ -691,6 +693,7 @@ POST /api/v1/cicd/releases/records
 GET /api/v1/cicd/apps/{name}/rollback-candidates
 GET /api/v1/cicd/apps/{name}/rollout
 GET /api/v1/cicd/apps/{name}/analysisruns
+GET /api/v1/cicd/apps/{name}/traffic
 POST /api/v1/cicd/apps/{name}/records/snapshot
 ```
 
@@ -741,6 +744,8 @@ Helm 会为 `cloudops-cicd` 创建 ServiceAccount、Role、RoleBinding，仅允�
 ```text
 argoproj.io/rollouts
 argoproj.io/analysisruns
+networking.istio.io/virtualservices
+networking.istio.io/destinationrules
 ```
 
 验证 `/rollout` 和 `/analysisruns` 前，需要先重新运行 `test-cloudops-cicd-kaniko`，确保线上 `cloudops-cicd` 镜像已经包含新增应用清单和接口。若仍运行旧镜像，请求 `rollouts-demo-istio` 会返回 `app_not_found`。

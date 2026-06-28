@@ -193,7 +193,32 @@ Istio 指标异常
 
 ```text
 将 timeout/retry/circuit breaker 参数纳入 values 管理
-cloudops-cicd 展示当前 VirtualService / DestinationRule 摘要
 Release Record 记录流量治理策略版本
 故障复盘时关联 Istio 指标与灰度阶段
 ```
+
+## cloudops-cicd 流量策略查询
+
+`cloudops-cicd` 已提供 Istio 流量治理摘要接口：
+
+```bash
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-gateway-rollout/traffic
+```
+
+返回内容包括：
+
+```text
+VirtualService:
+  hosts
+  gateways
+  route host / port / weight
+  timeout
+  retries
+
+DestinationRule:
+  host
+  connectionPool
+  outlierDetection
+```
+
+该接口用于发布评审和故障复盘时确认当前流量治理策略。
