@@ -222,3 +222,73 @@ DestinationRule:
 ```
 
 该接口用于发布评审和故障复盘时确认当前流量治理策略。
+
+实际验证结果：
+
+```text
+验证时间: 2026-06-28
+验证接口:
+  GET /api/v1/cicd/apps/cloudops-gateway-rollout/traffic
+
+VirtualService:
+  name: cloudops-gateway-rollout
+  namespace: cloudops-dev
+  hosts:
+    - istio-cloudops-gateway.jianggan.cn
+    - api.cloudops.jianggan.cn
+  gateways:
+    - cloudops-gateway-rollout
+  route:
+    cloudops-gateway-rollout-stable:
+      port: 80
+      weight: 100
+    cloudops-gateway-rollout-canary:
+      port: 80
+      weight: 0
+
+DestinationRule:
+  当前未应用运行态 DestinationRule，因此返回为空。
+```
+
+## Release Record 策略记录设计
+
+后续可将 `/traffic` 摘要写入 Release Record，用于审计一次发布期间的流量治理策略。
+
+建议记录字段：
+
+```text
+traffic.virtual_service.hosts
+traffic.virtual_service.gateways
+traffic.virtual_service.routes[].host
+traffic.virtual_service.routes[].weight
+traffic.virtual_service.routes[].timeout
+traffic.virtual_service.routes[].retries
+traffic.destination_rules[].host
+traffic.destination_rules[].connection_pool
+traffic.destination_rules[].outlier_detection
+```
+
+记录时机：
+
+```text
+发布前:
+  记录当前 stable/canary 权重和是否启用 timeout/retry/circuit breaker
+
+灰度中:
+  记录 25% / 50% 阶段的 VirtualService 权重
+
+发布后:
+  记录 stable 100 / canary 0 的最终状态
+
+故障时:
+  记录故障发生时的 timeout/retry/circuit breaker 和 outlier detection 状态
+```
+
+价值：
+
+```text
+发布复盘时能确认当时实际流量权重
+能判断是否存在重试放大故障
+能判断是否启用熔断和异常实例剔除
+能把流量策略和 AnalysisRun / Prometheus 指标关联
+```

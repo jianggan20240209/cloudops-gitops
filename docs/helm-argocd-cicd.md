@@ -750,6 +750,28 @@ networking.istio.io/destinationrules
 
 验证 `/rollout` 和 `/analysisruns` 前，需要先重新运行 `test-cloudops-cicd-kaniko`，确保线上 `cloudops-cicd` 镜像已经包含新增应用清单和接口。若仍运行旧镜像，请求 `rollouts-demo-istio` 会返回 `app_not_found`。
 
+第十一版流量治理接口验证结果：
+
+```text
+验证时间: 2026-06-28
+验证应用: cloudops-gateway-rollout
+验证接口:
+  GET /api/v1/cicd/apps/cloudops-gateway-rollout/traffic
+
+VirtualService:
+  hosts:
+    istio-cloudops-gateway.jianggan.cn
+    api.cloudops.jianggan.cn
+  gateways:
+    cloudops-gateway-rollout
+  route:
+    cloudops-gateway-rollout-stable weight 100
+    cloudops-gateway-rollout-canary weight 0
+
+DestinationRule:
+  当前未应用运行态 DestinationRule，因此为空
+```
+
 第十二版实际验证结果：
 
 ```text
