@@ -682,7 +682,7 @@ v11:
 v12:
   新增 POST /api/v1/cicd/apps/{name}/records/snapshot
   将当前应用聚合结果保存为 Release Record 快照
-  快照包含 Argo CD、Harbor、Prometheus、Rollout、AnalysisRun 和 checks
+  快照包含 Argo CD、Harbor、Prometheus、Rollout、AnalysisRun、traffic 和 checks
   快照 ID 追加时间戳，避免覆盖同 imageTag 的基础记录
 ```
 
@@ -791,6 +791,7 @@ DestinationRule:
   Harbor digest: sha256:4bc42510716fe90859015a14738d3b8c1e26cfe76c81ce95c5d64f0509c13a01
   Prometheus: up=4, targets=4, healthy=true
   Rollout: Healthy, stable_rs=cloudops-gateway-rollout-75464d5c7f
+  Traffic: VirtualService stable 100 / canary 0
   AnalysisRun:
     cloudops-gateway-rollout-75464d5c7f-2-2: Successful
     cloudops-gateway-rollout-75464d5c7f-2-5: Successful

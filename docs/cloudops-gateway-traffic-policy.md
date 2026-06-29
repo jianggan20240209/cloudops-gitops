@@ -252,7 +252,7 @@ DestinationRule:
 
 ## Release Record 策略记录设计
 
-后续可将 `/traffic` 摘要写入 Release Record，用于审计一次发布期间的流量治理策略。
+`/traffic` 摘要已接入 Release Record snapshot，用于审计一次发布期间的流量治理策略。
 
 建议记录字段：
 
@@ -292,3 +292,12 @@ traffic.destination_rules[].outlier_detection
 能判断是否启用熔断和异常实例剔除
 能把流量策略和 AnalysisRun / Prometheus 指标关联
 ```
+
+保存方式：
+
+```bash
+curl --ssl-no-revoke -k -X POST \
+  https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot
+```
+
+快照中的 `verification.traffic` 会保存当前 VirtualService 和 DestinationRule 摘要。
