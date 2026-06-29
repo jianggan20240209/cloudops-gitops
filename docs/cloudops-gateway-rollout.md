@@ -20,8 +20,8 @@ dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
 dev/platform/istio/api-cloudops-certificate/certificate.yaml
 
 dev/backend/rollouts/chart/                  # 共享 istio-rollout Helm chart
-dev/backend/rollouts/cloudops-gateway/
-  values.yaml                                # 应用 values，含 trafficPolicy
+dev/backend/rollouts/chart/values/
+  cloudops-gateway.yaml                      # 应用 values，含 trafficPolicy
 ```
 
 Argo CD 通过 Helm 部署：
@@ -34,7 +34,7 @@ source:
       - values/cloudops-gateway.yaml
 ```
 
-流量治理参数在 `values.yaml` 的 `trafficPolicy` 段管理。当前已启用 `timeoutRetry`，详见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md)。
+流量治理参数在 `chart/values/cloudops-gateway.yaml` 的 `trafficPolicy` 段管理。当前已启用 `timeoutRetry`，详见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md)。
 
 ## Helm 迁移验证
 
