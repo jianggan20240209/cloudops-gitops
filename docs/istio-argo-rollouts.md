@@ -112,9 +112,14 @@ kubectl -n argocd patch application istio-ingressgateway-monitor-dev \
 
 kubectl -n monitoring get podmonitor,servicemonitor istio-ingressgateway
 kubectl -n istio-ingress get svc istio-ingressgateway -o jsonpath='{.spec.ports[*].name}{"\n"}'
+# 若缺少 http-envoy-prom，强制同步 gateway Application 后再查
+kubectl -n argocd annotate application istio-ingressgateway-dev argocd.argoproj.io/refresh=hard --overwrite
+kubectl -n argocd patch application istio-ingressgateway-dev --type merge \
+  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
 kubectl -n istio-ingress delete podmonitor istio-ingressgateway --ignore-not-found
 kubectl -n istio-ingress get pod -l istio=ingressgateway --show-labels
 bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
+curl -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-gateway-rollout/observability
 ```
 
 PodMonitor 位于 `monitoring` 命名空间，通过 `namespaceSelector` 抓取 `istio-ingress` gateway Pod（kube-prometheus-stack 默认识别 `monitoring` 内的 PodMonitor）。
