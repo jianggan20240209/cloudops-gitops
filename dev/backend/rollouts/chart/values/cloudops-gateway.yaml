@@ -63,7 +63,7 @@ trafficPolicy:
       perTryTimeout: 1s
       retryOn: connect-failure,refused-stream,5xx
   circuitBreaker:
-    enabled: false
+    enabled: true
     connectionPool:
       tcp:
         maxConnections: 100

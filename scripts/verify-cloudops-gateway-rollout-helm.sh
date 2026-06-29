@@ -123,3 +123,8 @@ if [[ "$FAIL" -ne 0 ]]; then
   exit 1
 fi
 echo "Verification complete."
+echo
+echo "Next:"
+echo "  bash scripts/verify-cloudops-gateway-release-snapshot.sh"
+echo "  bash scripts/verify-cloudops-gateway-canary-observability.sh   # restarts rollout"
+echo "  bash scripts/verify-cloudops-gateway-circuit-breaker.sh        # after circuitBreaker sync"
