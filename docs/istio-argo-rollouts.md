@@ -99,6 +99,7 @@ dev/platform/istio/ingress-gateway-monitor/podmonitor.yaml
 `api.cloudops.jianggan.cn` 流量经过 ingress gateway，但后端 Rollout Pod 默认未注入 sidecar，因此 `istio_requests_total` 需从 **istio-ingressgateway PodMonitor** 采集，而不是应用 Pod 的 ServiceMonitor。
 
 ```bash
+kubectl apply -f dev/platform/argocd/project/dev-platform-project.yaml
 kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
 
 kubectl -n argocd annotate application istio-ingressgateway-monitor-dev \
@@ -113,6 +114,8 @@ kubectl -n istio-ingress delete podmonitor istio-ingressgateway --ignore-not-fou
 kubectl -n istio-ingress get pod -l istio=ingressgateway --show-labels
 bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
 ```
+
+PodMonitor 位于 `monitoring` 命名空间，通过 `namespaceSelector` 抓取 `istio-ingress` gateway Pod（kube-prometheus-stack 默认识别 `monitoring` 内的 PodMonitor）。
 
 harbor-server 在集群外执行 `discover-istio-metrics.sh` 时，脚本会自动通过 `kubectl -n monitoring run curl` 访问 Prometheus，无需解析 `*.svc.cluster.local`。
 
