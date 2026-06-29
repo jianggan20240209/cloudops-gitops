@@ -400,3 +400,11 @@ Checks:
 结论:
   Release Record 快照写入成功
 ```
+
+验证脚本（2026-06-29）：
+
+```bash
+bash scripts/verify-cloudops-gateway-release-snapshot.sh
+bash scripts/verify-cloudops-gateway-canary-observability.sh   # 会 restart Rollout
+bash scripts/verify-cloudops-gateway-circuit-breaker.sh        # 需先 sync circuitBreaker
+```

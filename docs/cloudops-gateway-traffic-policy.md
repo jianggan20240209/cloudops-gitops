@@ -60,12 +60,21 @@ trafficPolicy:
     enabled: true
 ```
 
-启用 circuit breaker：
+启用 circuit breaker（2026-06-29 已在 lab values 启用）：
 
 ```yaml
 trafficPolicy:
   circuitBreaker:
     enabled: true
+```
+
+同步后验证：
+
+```bash
+kubectl -n argocd patch application cloudops-gateway-rollout-dev --type merge \
+  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
+kubectl -n cloudops-dev get destinationrule | grep cloudops-gateway-rollout
+bash scripts/verify-cloudops-gateway-circuit-breaker.sh
 ```
 
 Argo CD Application 已配置 `ignoreDifferences`，避免 Rollout 调整 VirtualService 权重时被 GitOps 回滚。
@@ -420,6 +429,9 @@ GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
 
 scripts/discover-istio-metrics.sh: PASS（含 traffic warmup 后 rate[1m]≈2）
 verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
+scripts/verify-cloudops-gateway-release-snapshot.sh: 验证 verification.observability 写入快照
+scripts/verify-cloudops-gateway-canary-observability.sh: 重启 Rollout 并在 canary 阶段抓 snapshot
+scripts/verify-cloudops-gateway-circuit-breaker.sh: 验证 DestinationRule 与 /traffic 摘要
 ```
 
 根因与修复：Istio gateway chart 1.30 对外 metrics 端口为 **15090**（`http-envoy-prom`），PodMonitor 原先指向 15020；PodMonitor/ServiceMonitor 部署在 **monitoring** 命名空间，并通过 `namespaceSelector` 抓取 `istio-ingress` gateway Pod。
