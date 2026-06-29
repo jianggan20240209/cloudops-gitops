@@ -38,11 +38,13 @@ source:
 
 ## Helm 迁移验证
 
+见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md) 中 2026-06-29 验证结果与修复步骤。
+
 ```bash
 bash scripts/verify-cloudops-gateway-rollout-helm.sh
 ```
 
-预期：
+预期（Application 已 apply 且 sync 后）：
 
 ```text
 Argo CD: Synced / Healthy

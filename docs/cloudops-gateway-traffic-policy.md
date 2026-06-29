@@ -310,6 +310,48 @@ Release Record 记录流量治理策略版本                      # 已完成
 bash scripts/verify-cloudops-gateway-rollout-helm.sh
 ```
 
+### 2026-06-29 首次验证结果
+
+```text
+Argo CD: OutOfSync / Healthy
+revision: eeebadb
+spec.source.path: dev/backend/rollouts/cloudops-gateway   # 仍是旧 plain 目录
+spec.source.helm.valueFiles: <none>
+
+VirtualService: 仅有 weight 100/0，无 timeout/retry
+API: readyz / version 正常
+cloudops-cicd /traffic: 无 timeout/retry 字段
+```
+
+结论：Git 仓库已切到 Helm chart（`dev/backend/rollouts/chart` + `values.yaml`），但集群上的 Application 资源尚未 `kubectl apply` 更新，因此 `trafficPolicy.timeoutRetry.enabled=true` 未生效。
+
+修复步骤：
+
+```bash
+kubectl apply -f dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
+
+kubectl -n argocd annotate application cloudops-gateway-rollout-dev \
+  argocd.argoproj.io/refresh=hard --overwrite
+
+kubectl -n argocd patch application cloudops-gateway-rollout-dev \
+  --type merge \
+  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
+
+bash scripts/verify-cloudops-gateway-rollout-helm.sh
+```
+
+同步成功后预期：
+
+```text
+spec.source.path: dev/backend/rollouts/chart
+spec.source.helm.valueFiles: ../cloudops-gateway/values.yaml
+Argo CD: Synced / Healthy
+VirtualService: timeout=3s, retries.attempts=2
+cloudops-cicd /traffic 显示 timeout/retry
+```
+
+`/observability` 需先运行 Jenkins `test-cloudops-cicd-kaniko` 部署 `cloudops-platform` v13 镜像。
+
 检查项：
 
 ```text
