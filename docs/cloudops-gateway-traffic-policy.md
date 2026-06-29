@@ -299,7 +299,25 @@ Istio 指标异常
 ```text
 将 timeout/retry/circuit breaker 参数纳入 values 管理   # 已完成
 Release Record 记录流量治理策略版本                      # 已完成
-故障复盘时关联 Istio 指标与灰度阶段
+故障复盘时关联 Istio 指标与灰度阶段                      # 已完成（cloudops-cicd /observability）
+```
+
+## Helm 迁移验证
+
+在可访问集群的环境执行：
+
+```bash
+bash scripts/verify-cloudops-gateway-rollout-helm.sh
+```
+
+检查项：
+
+```text
+Argo CD Application: Synced / Healthy
+Helm source: dev/backend/rollouts/chart + values.yaml
+VirtualService: timeout/retry 已启用（trafficPolicy.timeoutRetry.enabled=true）
+API readyz / version 正常
+cloudops-cicd /traffic 返回 timeout/retry 摘要
 ```
 
 ## cloudops-cicd 流量策略查询
@@ -406,3 +424,44 @@ curl --ssl-no-revoke -k -X POST \
 ```
 
 快照中的 `verification.traffic` 会保存当前 VirtualService 和 DestinationRule 摘要。
+快照中的 `verification.observability` 会保存灰度阶段与 Istio 指标关联结果。
+
+## 故障复盘关联
+
+`cloudops-cicd` 提供 observability 接口，将灰度阶段与 Istio 指标关联：
+
+```bash
+curl --ssl-no-revoke -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-gateway-rollout/observability
+```
+
+返回字段：
+
+```text
+canary_stage.phase
+canary_stage.current_step_index
+canary_stage.stable_weight
+canary_stage.canary_weight
+canary_stage.stage                # stable / canary_25 / canary_50 / progressing
+
+istio_metrics.request_rate_rps
+istio_metrics.error_rate_rps
+istio_metrics.error_rate_percent
+istio_metrics.p95_latency_ms
+istio_metrics.by_destination[]    # stable / canary 拆分
+```
+
+复盘时建议：
+
+```text
+1. 保存灰度前 / 25% / 50% / 100% 各阶段 snapshot
+2. 对比 observability.canary_stage.stage 与 istio_metrics.error_rate_percent
+3. 若启用 timeout/retry，检查 error 是否因重试放大
+4. 若启用 circuit breaker，检查 by_destination 是否出现 stable/canary 差异
+```
+
+保存 snapshot：
+
+```bash
+curl --ssl-no-revoke -k -X POST \
+  https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot
+```

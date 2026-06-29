@@ -684,6 +684,12 @@ v12:
   将当前应用聚合结果保存为 Release Record 快照
   快照包含 Argo CD、Harbor、Prometheus、Rollout、AnalysisRun、traffic 和 checks
   快照 ID 追加时间戳，避免覆盖同 imageTag 的基础记录
+
+v13:
+  新增 GET /api/v1/cicd/apps/{name}/observability
+  关联 Rollout 灰度阶段（phase、step、stable/canary 权重）与 Istio Prometheus 指标
+  /release、Release Record snapshot 的 verification 附带 observability 字段
+  用于故障复盘时对照灰度阶段与请求速率、5xx、P95 延迟
 ```
 
 新增接口：
@@ -694,6 +700,7 @@ GET /api/v1/cicd/apps/{name}/rollback-candidates
 GET /api/v1/cicd/apps/{name}/rollout
 GET /api/v1/cicd/apps/{name}/analysisruns
 GET /api/v1/cicd/apps/{name}/traffic
+GET /api/v1/cicd/apps/{name}/observability
 POST /api/v1/cicd/apps/{name}/records/snapshot
 ```
 

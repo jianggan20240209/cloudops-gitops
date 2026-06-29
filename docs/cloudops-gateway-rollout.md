@@ -34,7 +34,23 @@ source:
       - ../cloudops-gateway/values.yaml
 ```
 
-流量治理参数在 `values.yaml` 的 `trafficPolicy` 段管理，默认关闭。详见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md)。
+流量治理参数在 `values.yaml` 的 `trafficPolicy` 段管理。当前已启用 `timeoutRetry`，详见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md)。
+
+## Helm 迁移验证
+
+```bash
+bash scripts/verify-cloudops-gateway-rollout-helm.sh
+```
+
+预期：
+
+```text
+Argo CD: Synced / Healthy
+VirtualService: timeout=3s, retries.attempts=2
+API: readyz / version 正常
+cloudops-cicd /traffic 显示 timeout/retry
+cloudops-cicd /observability 显示 canary_stage + istio_metrics
+```
 
 ## 流量模型
 

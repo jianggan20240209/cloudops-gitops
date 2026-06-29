@@ -58,7 +58,7 @@ istio:
 # changing runtime behavior until explicitly enabled after review.
 trafficPolicy:
   timeoutRetry:
-    enabled: false
+    enabled: true
     timeout: 3s
     retries:
       attempts: 2
