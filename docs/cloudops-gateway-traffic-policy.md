@@ -385,7 +385,29 @@ cloudops-cicd /traffic:
   需运行 Jenkins test-cloudops-cicd-kaniko 部署 v13 镜像
 ```
 
-`/observability` 需先运行 Jenkins `test-cloudops-cicd-kaniko` 部署 `cloudops-platform` v13 镜像。
+### 2026-06-29 observability 部署验证结果
+
+```text
+cloudops-cicd 镜像: main-17
+Argo CD cloudops-cicd-dev: Synced / Healthy
+
+GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
+  canary_stage:
+    phase: Healthy
+    current_step_index: 7
+    stable_weight: 100
+    stage: stable
+  istio_metrics:
+    source: prometheus
+    message: no istio request metrics matched destination_service_name=~"cloudops-gateway-rollout-.*"
+  source: kubernetes,prometheus
+
+verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
+```
+
+说明：`istio_metrics` 暂无数据通常是因为 Prometheus 中 `destination_service_name` 标签与查询不匹配，或近期无经 Istio 的 API 流量。可在产生流量后重试，或后续调整 PromQL 标签匹配。
+
+`/observability` 已随 Jenkins `test-cloudops-cicd-kaniko` 部署 main-17 生效。
 
 检查项：
 

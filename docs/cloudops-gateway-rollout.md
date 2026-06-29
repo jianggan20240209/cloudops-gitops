@@ -53,7 +53,7 @@ cloudops-cicd /traffic 显示 timeout/retry
 cloudops-cicd /observability 显示 canary_stage + istio_metrics
 ```
 
-2026-06-29 验证：Helm 迁移与 timeout/retry 已全部 PASS；`/observability` 待 Jenkins 部署 v13。
+2026-06-29 验证：Helm 迁移、timeout/retry、`/traffic`、`/observability`（main-17）已全部 PASS。
 
 ## 流量模型
 

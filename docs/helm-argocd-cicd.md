@@ -802,6 +802,21 @@ cloudops-cicd /traffic:
   GET /observability 仍 404，需 Jenkins test-cloudops-cicd-kaniko 部署 v13
 ```
 
+observability 部署验证结果：
+
+```text
+验证时间: 2026-06-29
+cloudops-cicd 镜像: main-17
+Argo CD cloudops-cicd-dev: Synced / Healthy
+
+GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
+  canary_stage.stage: stable
+  canary_stage.stable_weight: 100
+  istio_metrics: 暂无 series（Prometheus 标签或流量原因）
+
+scripts/verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
+```
+
 第十二版实际验证结果：
 
 ```text
