@@ -358,13 +358,31 @@ cloudops-cicd /traffic 显示 timeout/retry
 ### 2026-06-29 修复后验证结果
 
 ```text
-git pull: 5c06d9b
+git pull: a890285
 Argo CD: Synced / Healthy
-VirtualService: timeout=3s 已生效
-API: readyz / version 正常
+revision: 5c06d9b
+Helm path: dev/backend/rollouts/chart
+Helm valueFiles: values/cloudops-gateway.yaml
 
-verify 脚本注意:
-  勿使用 PATH 作为变量名，否则会覆盖系统 PATH 导致 kubectl not found（已修复）
+VirtualService:
+  timeout: 3s
+  retries.attempts: 2
+  retries.perTryTimeout: 1s
+  retries.retryOn: connect-failure,refused-stream,5xx
+  stable weight: 100
+  canary weight: 0
+
+API:
+  readyz: ok
+  version: main-13
+
+cloudops-cicd /traffic:
+  timeout: 3s
+  retries: attempts=2, per_try_timeout=1s
+
+待完成:
+  cloudops-cicd /observability 返回 404
+  需运行 Jenkins test-cloudops-cicd-kaniko 部署 v13 镜像
 ```
 
 `/observability` 需先运行 Jenkins `test-cloudops-cicd-kaniko` 部署 `cloudops-platform` v13 镜像。

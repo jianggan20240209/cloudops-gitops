@@ -779,6 +779,29 @@ DestinationRule:
   当前未应用运行态 DestinationRule，因此为空
 ```
 
+Helm trafficPolicy GitOps 验证结果：
+
+```text
+验证时间: 2026-06-29
+验证应用: cloudops-gateway-rollout
+Argo CD: Synced / Healthy
+Helm:
+  path: dev/backend/rollouts/chart
+  valueFiles: values/cloudops-gateway.yaml
+
+VirtualService:
+  timeout: 3s
+  retries: attempts=2, perTryTimeout=1s
+  retryOn: connect-failure,refused-stream,5xx
+  stable/canary weight: 100 / 0
+
+cloudops-cicd /traffic:
+  timeout + retries 已返回
+
+待完成:
+  GET /observability 仍 404，需 Jenkins test-cloudops-cicd-kaniko 部署 v13
+```
+
 第十二版实际验证结果：
 
 ```text
