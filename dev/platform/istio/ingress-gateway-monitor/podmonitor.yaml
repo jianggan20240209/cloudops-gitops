@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
   name: istio-ingressgateway
-  namespace: istio-ingress
+  namespace: monitoring
   labels:
     release: kube-prometheus-stack
     app: istio-ingressgateway
@@ -10,6 +10,9 @@ metadata:
     app.kubernetes.io/part-of: cloudops
     app.kubernetes.io/managed-by: argocd
 spec:
+  namespaceSelector:
+    matchNames:
+      - istio-ingress
   selector:
     matchLabels:
       istio: ingressgateway

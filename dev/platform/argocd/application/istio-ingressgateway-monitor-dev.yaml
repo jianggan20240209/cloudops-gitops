@@ -11,7 +11,7 @@ spec:
     path: dev/platform/istio/ingress-gateway-monitor
   destination:
     server: https://kubernetes.default.svc
-    namespace: istio-ingress
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true

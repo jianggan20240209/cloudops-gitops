@@ -38,15 +38,36 @@ kubectl -n argocd get application istio-ingressgateway-monitor-dev \
   echo "Application istio-ingressgateway-monitor-dev not found"
 
 echo
-echo "== PodMonitor in istio-ingress =="
-kubectl -n istio-ingress get podmonitor istio-ingressgateway 2>/dev/null || \
-  echo "PodMonitor istio-ingressgateway not found. Sync Argo CD application first."
+echo "== PodMonitor (expect namespace monitoring) =="
+kubectl -n monitoring get podmonitor istio-ingressgateway 2>/dev/null || \
+  echo "PodMonitor not found in monitoring namespace"
+kubectl -n istio-ingress get podmonitor istio-ingressgateway 2>/dev/null && \
+  echo "WARN: legacy PodMonitor still in istio-ingress; delete after sync to monitoring"
 
 echo
 echo "== gateway pod labels =="
 kubectl -n istio-ingress get pod -l istio=ingressgateway --show-labels 2>/dev/null | head -n 5 || true
 
 echo
+echo "== gateway local metrics endpoint =="
+GW_POD="$(kubectl -n istio-ingress get pod -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+if [[ -n "${GW_POD}" ]]; then
+  kubectl -n istio-ingress exec "${GW_POD}" -c istio-proxy -- \
+    wget -qO- http://127.0.0.1:15020/stats/prometheus 2>/dev/null | grep -m1 'istio_requests_total' || \
+    echo "istio_requests_total not found on gateway :15020 (check istio-proxy container)"
+else
+  echo "gateway pod not found"
+fi
+
+echo
+echo "== prometheus scrape target for gateway =="
+query "up{namespace=\"istio-ingress\",pod=~\"istio-ingressgateway.*\"}" | head -c 2000
+echo
+
+echo "== envoy metrics from gateway pod =="
+query "count({__name__=~\"envoy_.*\",namespace=\"istio-ingress\",pod=~\"istio-ingressgateway.*\"})" | head -c 2000
+echo
+
 echo "== istio metric families =="
 query 'count({__name__=~"istio_.*"})' | head -c 2000
 echo
@@ -63,7 +84,7 @@ echo
 echo "== candidate selectors =="
 for q in \
   "sum(rate(istio_requests_total{destination_service_name=~\"${APP}-.*\"}[5m]))" \
-  "sum(rate(istio_requests_total{destination_service=~\"${APP}-.*\\.${NS}\\\\.svc\\\\.cluster\\\\.local\"}[5m]))" \
+  "sum(rate(istio_requests_total{destination_service=~\"${APP}-.*${NS}.svc.cluster.local\"}[5m]))" \
   "sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\",destination_service_namespace=\"${NS}\",destination_service=~\"${APP}-.*\"}[5m]))" \
   "sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[5m]))"
 do
