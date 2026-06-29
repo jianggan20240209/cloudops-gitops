@@ -355,6 +355,18 @@ VirtualService: timeout=3s, retries.attempts=2
 cloudops-cicd /traffic 显示 timeout/retry
 ```
 
+### 2026-06-29 修复后验证结果
+
+```text
+git pull: 5c06d9b
+Argo CD: Synced / Healthy
+VirtualService: timeout=3s 已生效
+API: readyz / version 正常
+
+verify 脚本注意:
+  勿使用 PATH 作为变量名，否则会覆盖系统 PATH 导致 kubectl not found（已修复）
+```
+
 `/observability` 需先运行 Jenkins `test-cloudops-cicd-kaniko` 部署 `cloudops-platform` v13 镜像。
 
 检查项：

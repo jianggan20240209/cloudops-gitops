@@ -17,16 +17,16 @@ kubectl -n argocd get application "$APP" \
 
 SYNC=$(kubectl -n argocd get application "$APP" -o jsonpath='{.status.sync.status}')
 HEALTH=$(kubectl -n argocd get application "$APP" -o jsonpath='{.status.health.status}')
-PATH=$(kubectl -n argocd get application "$APP" -o jsonpath='{.spec.source.path}')
+SOURCE_PATH=$(kubectl -n argocd get application "$APP" -o jsonpath='{.spec.source.path}')
 VALUE_FILES=$(kubectl -n argocd get application "$APP" -o jsonpath='{.spec.source.helm.valueFiles}')
 
 echo
 echo "== Helm source =="
-echo "path: ${PATH}"
+echo "path: ${SOURCE_PATH}"
 echo "valueFiles: ${VALUE_FILES:-<none>}"
 
-if [[ "$PATH" != "$EXPECTED_PATH" ]]; then
-  warn "Application path is still '$PATH'; expected '$EXPECTED_PATH'."
+if [[ "$SOURCE_PATH" != "$EXPECTED_PATH" ]]; then
+  warn "Application path is still '$SOURCE_PATH'; expected '$EXPECTED_PATH'."
   echo "Fix:"
   echo "  kubectl apply -f dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml"
   echo "  kubectl -n argocd annotate application $APP argocd.argoproj.io/refresh=hard --overwrite"
