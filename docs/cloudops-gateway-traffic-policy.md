@@ -405,9 +405,24 @@ GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
 verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
 ```
 
-说明：`istio_metrics` 暂无数据通常是因为 Prometheus 中 `destination_service_name` 标签与查询不匹配，或近期无经 Istio 的 API 流量。可在产生流量后重试，或后续调整 PromQL 标签匹配。
+说明：`istio_metrics` 若仍无 `request_rate_rps`，在集群内运行 `bash scripts/discover-istio-metrics.sh` 查看 Prometheus 实际标签；`cloudops-cicd` 已支持多标签 fallback（`destination_service_name` / `destination_service` / `destination_workload` / ingress 出站），需 Jenkins 重新部署后生效。
 
-`/observability` 已随 Jenkins `test-cloudops-cicd-kaniko` 部署 main-17 生效。
+Prometheus 标签排查：
+
+```bash
+kubectl -n monitoring run curl-prom-istio-discover \
+  --rm -i --restart=Never \
+  --image=curlimages/curl:8.16.0 \
+  -- bash -lc 'bash -s' < scripts/discover-istio-metrics.sh
+```
+
+或在 harbor-server 上（需能访问 Prometheus）：
+
+```bash
+bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
+```
+
+`/observability` 已随 Jenkins `test-cloudops-cicd-kaniko` 部署 main-17 生效；Istio 标签 fallback 修复需重新运行 Jenkins 部署更新后的 `cloudops-cicd`。
 
 检查项：
 

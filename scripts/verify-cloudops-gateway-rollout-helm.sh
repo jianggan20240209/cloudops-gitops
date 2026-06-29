@@ -96,7 +96,13 @@ OBS_CODE=$(curl -k -s -o /tmp/cloudops-observability.json -w '%{http_code}' \
 if [[ "$OBS_CODE" == "200" ]]; then
   cat /tmp/cloudops-observability.json | head -c 2000
   echo
-  pass "cloudops-cicd /observability is available."
+  if grep -q 'request_rate_rps' /tmp/cloudops-observability.json; then
+    pass "cloudops-cicd /observability reports istio request_rate_rps."
+  elif grep -q 'matched_selector' /tmp/cloudops-observability.json; then
+    pass "cloudops-cicd /observability is available (matched_selector present)."
+  else
+    warn "cloudops-cicd /observability has no istio request_rate_rps. Run scripts/discover-istio-metrics.sh in cluster."
+  fi
 else
   warn "cloudops-cicd /observability returned HTTP $OBS_CODE. Run Jenkins test-cloudops-cicd-kaniko to deploy v13."
 fi
