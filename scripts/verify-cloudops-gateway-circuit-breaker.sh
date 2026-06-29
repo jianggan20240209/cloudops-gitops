@@ -2,20 +2,52 @@
 # Verify Istio circuit breaker DestinationRules synced via Helm trafficPolicy.
 set -euo pipefail
 
-NAME="${1:-cloudops-gateway-rollout}"
-NS="${2:-cloudops-dev}"
+APP="${1:-cloudops-gateway-rollout-dev}"
+NAME="${2:-cloudops-gateway-rollout}"
+NS="${3:-cloudops-dev}"
 BASE="https://cloudops.jianggan.cn/api/v1/cicd/apps/${NAME}"
 FAIL=0
 
 warn() { echo "WARN: $*"; FAIL=1; }
 pass() { echo "PASS: $*"; }
 
+wait_for_destinationrules() {
+  local attempt
+  for attempt in $(seq 1 36); do
+    if kubectl -n "$NS" get destinationrule "${NAME}" "${NAME}-canary" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+echo "== Argo CD Application =="
+kubectl -n argocd get application "$APP" \
+  -o custom-columns=NAME:.metadata.name,SYNC:.status.sync.status,REVISION:.status.sync.revision
+
+if ! kubectl -n "$NS" get destinationrule "${NAME}" >/dev/null 2>&1; then
+  echo
+  echo "== sync circuitBreaker values =="
+  kubectl -n argocd annotate application "$APP" argocd.argoproj.io/refresh=hard --overwrite
+  kubectl -n argocd patch application "$APP" --type merge \
+    -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
+  pass "Triggered Argo CD sync for circuitBreaker."
+  echo "Waiting up to 180s for DestinationRule..."
+  if wait_for_destinationrules; then
+    pass "DestinationRule appeared after sync."
+  else
+    warn "DestinationRule still missing after sync wait."
+  fi
+fi
+
+echo
 echo "== DestinationRule resources =="
 if kubectl -n "$NS" get destinationrule "${NAME}" "${NAME}-canary" >/dev/null 2>&1; then
   kubectl -n "$NS" get destinationrule "${NAME}" "${NAME}-canary"
   pass "DestinationRule stable + canary exist."
 else
-  warn "DestinationRule not found. Enable trafficPolicy.circuitBreaker in values/cloudops-gateway.yaml and sync Argo CD."
+  warn "DestinationRule not found. Confirm values/cloudops-gateway.yaml has trafficPolicy.circuitBreaker.enabled: true."
   kubectl -n "$NS" get destinationrule 2>/dev/null | grep "$NAME" || true
 fi
 
@@ -47,12 +79,6 @@ elif echo "$TRAFFIC" | grep -q 'consecutive5xx'; then
 else
   warn "/traffic has no destination_rules summary (DestinationRule may be missing)."
 fi
-
-echo
-echo "== snapshot with traffic policy =="
-curl -k -fsS -X POST "${BASE}/records/snapshot" | head -c 2000
-echo
-pass "Snapshot saved (check verification.traffic in records/latest)."
 
 echo
 if [[ "$FAIL" -ne 0 ]]; then

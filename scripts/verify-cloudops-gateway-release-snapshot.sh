@@ -45,28 +45,40 @@ else
   warn "Snapshot response missing record id."
 fi
 
+if [[ -n "${RECORD_ID}" ]]; then
+  echo
+  echo "== GET records/${RECORD_ID} =="
+  RECORD=$(curl -k -fsS "${BASE}/records/${RECORD_ID}")
+  echo "$RECORD" | head -c 3500
+  echo
+
+  if echo "$RECORD" | grep -q '"source":"snapshot"'; then
+    pass "Snapshot record source is snapshot."
+  else
+    warn "Record ${RECORD_ID} is not marked source=snapshot."
+  fi
+
+  if echo "$RECORD" | grep -q 'observability'; then
+    pass "Snapshot record includes verification.observability."
+  else
+    warn "Snapshot record missing verification.observability."
+  fi
+
+  if echo "$RECORD" | grep -qE 'canary_stage|request_rate_rps|matched_selector'; then
+    pass "Snapshot observability contains canary_stage or istio metrics."
+  else
+    warn "Snapshot observability payload incomplete."
+  fi
+fi
+
 echo
-echo "== GET records/latest =="
+echo "== note on records/latest =="
+echo "records/latest returns the Jenkins base record (source=jenkins/static), not the snapshot id."
 LATEST=$(curl -k -fsS "${BASE}/records/latest")
-echo "$LATEST" | head -c 3000
-echo
-
-if echo "$LATEST" | grep -q '"source":"snapshot"'; then
-  pass "Latest record source is snapshot."
-else
-  warn "Latest record is not from snapshot."
-fi
-
 if echo "$LATEST" | grep -q 'observability'; then
-  pass "Latest record includes verification.observability."
+  pass "Base release record also exposes verification.observability."
 else
-  warn "Latest record missing verification.observability."
-fi
-
-if echo "$LATEST" | grep -qE 'canary_stage|request_rate_rps|matched_selector'; then
-  pass "Observability payload contains canary_stage or istio metrics."
-else
-  warn "Observability payload incomplete in latest record."
+  echo "Base record id: $(echo "$LATEST" | grep -o '"id":"[^"]*"' | head -n1 || true)"
 fi
 
 echo

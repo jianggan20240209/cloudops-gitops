@@ -71,11 +71,10 @@ trafficPolicy:
 同步后验证：
 
 ```bash
-kubectl -n argocd patch application cloudops-gateway-rollout-dev --type merge \
-  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
-kubectl -n cloudops-dev get destinationrule | grep cloudops-gateway-rollout
 bash scripts/verify-cloudops-gateway-circuit-breaker.sh
 ```
+
+脚本会在 DestinationRule 缺失时自动 hard refresh + sync Argo CD 并等待最多 180s。
 
 Argo CD Application 已配置 `ignoreDifferences`，避免 Rollout 调整 VirtualService 权重时被 GitOps 回滚。
 
