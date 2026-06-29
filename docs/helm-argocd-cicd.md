@@ -805,16 +805,21 @@ cloudops-cicd /traffic:
 observability 部署验证结果：
 
 ```text
-验证时间: 2026-06-29
+验证时间: 2026-06-29（终验 PASS）
 cloudops-cicd 镜像: main-17
 Argo CD cloudops-cicd-dev: Synced / Healthy
+Istio scrape: monitoring/istio-ingressgateway PodMonitor + ServiceMonitor → gateway :15090
 
 GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
   canary_stage.stage: stable
   canary_stage.stable_weight: 100
-  istio_metrics: 暂无 series（Prometheus 标签或流量原因）
+  istio_metrics.request_rate_rps: 0.44
+  istio_metrics.p95_latency_ms: 3
+  istio_metrics.matched_selector: destination_service_name
+  istio_metrics.by_destination[0].destination: cloudops-gateway-rollout-stable
 
 scripts/verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
+scripts/discover-istio-metrics.sh: PASS
 ```
 
 第十二版实际验证结果：

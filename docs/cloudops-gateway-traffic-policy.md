@@ -387,9 +387,20 @@ cloudops-cicd /traffic:
 
 ### 2026-06-29 observability 部署验证结果
 
+**初验（仅 canary_stage，Istio 指标未采集）**
+
 ```text
 cloudops-cicd 镜像: main-17
-Argo CD cloudops-cicd-dev: Synced / Healthy
+istio_metrics.message: no istio request metrics matched ...
+```
+
+**终验（Istio ingress gateway PodMonitor/ServiceMonitor 修复后，全部 PASS）**
+
+```text
+验证时间: 2026-06-29（harbor-server）
+cloudops-cicd 镜像: main-17
+gateway Service ports: status-port http-envoy-prom http2 https
+Prometheus: up=1, count(istio_requests_total)=8, scrape :15090 http-envoy-prom
 
 GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
   canary_stage:
@@ -398,14 +409,22 @@ GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
     stable_weight: 100
     stage: stable
   istio_metrics:
+    request_rate_rps: 0.44
+    p95_latency_ms: 3
+    matched_selector: destination_service_name
+    by_destination:
+      - destination: cloudops-gateway-rollout-stable
+        request_rate_rps: 0.44
     source: prometheus
-    message: no istio request metrics matched destination_service_name=~"cloudops-gateway-rollout-.*"
   source: kubernetes,prometheus
 
+scripts/discover-istio-metrics.sh: PASS（含 traffic warmup 后 rate[1m]≈2）
 verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
 ```
 
-说明：`istio_metrics` 若仍无 `request_rate_rps`，先确认 Prometheus 是否采集 ingress gateway：
+根因与修复：Istio gateway chart 1.30 对外 metrics 端口为 **15090**（`http-envoy-prom`），PodMonitor 原先指向 15020；PodMonitor/ServiceMonitor 部署在 **monitoring** 命名空间，并通过 `namespaceSelector` 抓取 `istio-ingress` gateway Pod。
+
+若 `istio_metrics` 仍无 `request_rate_rps`，按顺序排查：
 
 ```bash
 kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-dev.yaml
