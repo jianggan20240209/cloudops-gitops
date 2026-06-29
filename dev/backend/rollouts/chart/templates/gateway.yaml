@@ -1,0 +1,32 @@
+{{- if .Values.istio.gateway.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ include "istio-rollout.name" . }}
+  namespace: {{ include "istio-rollout.namespace" . }}
+  labels:
+    {{- include "istio-rollout.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.istio.gateway.selector | nindent 4 }}
+  servers:
+    {{- if .Values.istio.gateway.httpHosts }}
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        {{- toYaml .Values.istio.gateway.httpHosts | nindent 8 }}
+    {{- end }}
+    {{- if and .Values.istio.gateway.httpsHosts .Values.istio.gateway.tls.credentialName }}
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: {{ .Values.istio.gateway.tls.credentialName }}
+      hosts:
+        {{- toYaml .Values.istio.gateway.httpsHosts | nindent 8 }}
+    {{- end }}
+{{- end }}

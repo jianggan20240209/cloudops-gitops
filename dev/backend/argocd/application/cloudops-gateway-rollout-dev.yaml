@@ -8,10 +8,20 @@ spec:
   source:
     repoURL: https://github.com/jianggan20240209/cloudops-gitops.git
     targetRevision: main
-    path: dev/backend/rollouts/cloudops-gateway
+    path: dev/backend/rollouts/chart
+    helm:
+      valueFiles:
+        - ../cloudops-gateway/values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: cloudops-dev
+  ignoreDifferences:
+    - group: networking.istio.io
+      kind: VirtualService
+      name: cloudops-gateway-rollout
+      namespace: cloudops-dev
+      jqPathExpressions:
+        - .spec.http[].route[].weight
   syncPolicy:
     automated:
       prune: true

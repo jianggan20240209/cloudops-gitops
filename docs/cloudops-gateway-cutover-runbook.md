@@ -159,8 +159,8 @@ GitOps 清单：
 ```text
 dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
 dev/platform/istio/api-cloudops-certificate/certificate.yaml
-dev/backend/rollouts/cloudops-gateway/gateway.yaml
-dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
+dev/backend/rollouts/chart/
+dev/backend/rollouts/cloudops-gateway/values.yaml
 ```
 
 配置内容：
@@ -312,7 +312,7 @@ kubectl argo rollouts undo cloudops-gateway-rollout -n cloudops-dev
 无插件时：
 
 ```text
-通过 GitOps 将 dev/backend/rollouts/cloudops-gateway/rollout.yaml 的 image tag 改回上一版本。
+通过 GitOps 将 `dev/backend/rollouts/cloudops-gateway/values.yaml` 的 `image.tag` 改回上一版本。
 ```
 
 ### GitOps 回退

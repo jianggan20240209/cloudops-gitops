@@ -1,4 +1,4 @@
-# Example only. This manifest is not referenced by Argo CD.
+# Example only. Prefer enabling trafficPolicy in dev/backend/rollouts/cloudops-gateway/values.yaml.
 # Apply manually only after reviewing current Rollout and VirtualService state.
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService

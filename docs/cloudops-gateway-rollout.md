@@ -19,15 +19,22 @@ dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
 dev/platform/argocd/application/api-cloudops-certificate-dev.yaml
 dev/platform/istio/api-cloudops-certificate/certificate.yaml
 
+dev/backend/rollouts/chart/                  # 共享 istio-rollout Helm chart
 dev/backend/rollouts/cloudops-gateway/
-  rollout.yaml
-  service-stable.yaml
-  service-canary.yaml
-  gateway.yaml
-  virtualservice.yaml
-  analysis-template.yaml
-  servicemonitor.yaml
+  values.yaml                                # 应用 values，含 trafficPolicy
 ```
+
+Argo CD 通过 Helm 部署：
+
+```yaml
+source:
+  path: dev/backend/rollouts/chart
+  helm:
+    valueFiles:
+      - ../cloudops-gateway/values.yaml
+```
+
+流量治理参数在 `values.yaml` 的 `trafficPolicy` 段管理，默认关闭。详见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md)。
 
 ## 流量模型
 

@@ -1,0 +1,32 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "istio-rollout.name" . }}
+  namespace: {{ include "istio-rollout.namespace" . }}
+  labels:
+    {{- include "istio-rollout.labels" . | nindent 4 }}
+spec:
+  hosts:
+    {{- toYaml .Values.istio.virtualService.hosts | nindent 4 }}
+  gateways:
+    - {{ include "istio-rollout.name" . }}
+  http:
+    - name: {{ .Values.istio.virtualService.routeName }}
+      {{- if .Values.trafficPolicy.timeoutRetry.enabled }}
+      timeout: {{ .Values.trafficPolicy.timeoutRetry.timeout }}
+      retries:
+        attempts: {{ .Values.trafficPolicy.timeoutRetry.retries.attempts }}
+        perTryTimeout: {{ .Values.trafficPolicy.timeoutRetry.retries.perTryTimeout }}
+        retryOn: {{ .Values.trafficPolicy.timeoutRetry.retries.retryOn }}
+      {{- end }}
+      route:
+        - destination:
+            host: {{ include "istio-rollout.stableService" . }}
+            port:
+              number: {{ .Values.service.port }}
+          weight: {{ .Values.istio.virtualService.stableWeight }}
+        - destination:
+            host: {{ include "istio-rollout.canaryService" . }}
+            port:
+              number: {{ .Values.service.port }}
+          weight: {{ .Values.istio.virtualService.canaryWeight }}

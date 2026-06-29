@@ -313,6 +313,7 @@ Checks:
 ## 后续
 
 - 已新增 `cloudops-gateway-rollout` 并行灰度版本，并完成真实服务 canary 验证。
+- `cloudops-gateway-rollout` 已迁移到共享 Helm chart `dev/backend/rollouts/chart/`，流量治理参数通过 `dev/backend/rollouts/cloudops-gateway/values.yaml` 的 `trafficPolicy` 段管理。
 - 正式切换入口前，执行 `docs/cloudops-gateway-cutover-runbook.md`。
 - Header / Tenant 灰度设计见 `docs/cloudops-gateway-header-tenant-canary.md`。
 - timeout / retry / circuit breaker 流量治理实验见 `docs/cloudops-gateway-traffic-policy.md`。

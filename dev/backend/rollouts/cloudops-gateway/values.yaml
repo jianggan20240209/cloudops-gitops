@@ -1,0 +1,104 @@
+app:
+  name: cloudops-gateway-rollout
+  namespace: cloudops-dev
+  env: dev
+
+image:
+  repository: harbor-server.jianggan.cn/cloudops/cloudops-gateway
+  tag: main-13
+  pullPolicy: IfNotPresent
+  pullSecret: harbor-pull-secret
+
+replicas: 2
+revisionHistoryLimit: 5
+
+service:
+  port: 80
+  targetPort: 8080
+
+probes:
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 20
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+istio:
+  gateway:
+    enabled: true
+    selector:
+      istio: ingressgateway
+    httpHosts:
+      - istio-cloudops-gateway.jianggan.cn
+      - api.cloudops.jianggan.cn
+    httpsHosts:
+      - api.cloudops.jianggan.cn
+    tls:
+      credentialName: api-cloudops-jianggan-cn-tls
+  virtualService:
+    hosts:
+      - istio-cloudops-gateway.jianggan.cn
+      - api.cloudops.jianggan.cn
+    routeName: primary
+    stableWeight: 100
+    canaryWeight: 0
+
+# Traffic policy is GitOps-managed via values. Keep disabled by default to avoid
+# changing runtime behavior until explicitly enabled after review.
+trafficPolicy:
+  timeoutRetry:
+    enabled: false
+    timeout: 3s
+    retries:
+      attempts: 2
+      perTryTimeout: 1s
+      retryOn: connect-failure,refused-stream,5xx
+  circuitBreaker:
+    enabled: false
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 50
+
+canary:
+  steps:
+    - setWeight: 25
+    - pauseSeconds: 60
+    - analysis: true
+    - setWeight: 50
+    - pauseSeconds: 60
+    - analysis: true
+    - setWeight: 100
+
+analysis:
+  enabled: true
+  templateName: cloudops-gateway-rollout-prometheus
+  prometheusAddress: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+  interval: 30s
+  count: 3
+  failureLimit: 3
+  successCondition: result[0] >= 1
+
+serviceMonitor:
+  enabled: true
+  release: kube-prometheus-stack
+  interval: 30s
+  path: /metrics

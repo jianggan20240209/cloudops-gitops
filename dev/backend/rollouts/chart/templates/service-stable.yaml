@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "istio-rollout.stableService" . }}
+  namespace: {{ include "istio-rollout.namespace" . }}
+  labels:
+    {{- include "istio-rollout.labels" . | nindent 4 }}
+    role: stable
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "istio-rollout.name" . }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}

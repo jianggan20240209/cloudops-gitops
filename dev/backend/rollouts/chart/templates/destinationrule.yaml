@@ -1,0 +1,53 @@
+{{- if .Values.trafficPolicy.circuitBreaker.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "istio-rollout.name" . }}
+  namespace: {{ include "istio-rollout.namespace" . }}
+  labels:
+    {{- include "istio-rollout.labels" . | nindent 4 }}
+spec:
+  host: {{ include "istio-rollout.stableService" . }}
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: {{ .Values.trafficPolicy.circuitBreaker.connectionPool.tcp.maxConnections }}
+      http:
+        http1MaxPendingRequests: {{ .Values.trafficPolicy.circuitBreaker.connectionPool.http.http1MaxPendingRequests }}
+        maxRequestsPerConnection: {{ .Values.trafficPolicy.circuitBreaker.connectionPool.http.maxRequestsPerConnection }}
+    outlierDetection:
+      consecutive5xxErrors: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.consecutive5xxErrors }}
+      interval: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.interval }}
+      baseEjectionTime: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.baseEjectionTime }}
+      maxEjectionPercent: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.maxEjectionPercent }}
+  subsets:
+    - name: stable
+      labels:
+        app: {{ include "istio-rollout.name" . }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "istio-rollout.name" . }}-canary
+  namespace: {{ include "istio-rollout.namespace" . }}
+  labels:
+    {{- include "istio-rollout.labels" . | nindent 4 }}
+spec:
+  host: {{ include "istio-rollout.canaryService" . }}
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: {{ .Values.trafficPolicy.circuitBreaker.connectionPool.tcp.maxConnections }}
+      http:
+        http1MaxPendingRequests: {{ .Values.trafficPolicy.circuitBreaker.connectionPool.http.http1MaxPendingRequests }}
+        maxRequestsPerConnection: {{ .Values.trafficPolicy.circuitBreaker.connectionPool.http.maxRequestsPerConnection }}
+    outlierDetection:
+      consecutive5xxErrors: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.consecutive5xxErrors }}
+      interval: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.interval }}
+      baseEjectionTime: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.baseEjectionTime }}
+      maxEjectionPercent: {{ .Values.trafficPolicy.circuitBreaker.outlierDetection.maxEjectionPercent }}
+  subsets:
+    - name: canary
+      labels:
+        app: {{ include "istio-rollout.name" . }}
+{{- end }}

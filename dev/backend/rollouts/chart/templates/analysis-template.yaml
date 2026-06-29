@@ -1,0 +1,24 @@
+{{- if .Values.analysis.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "istio-rollout.analysisTemplateName" . }}
+  namespace: {{ include "istio-rollout.namespace" . }}
+  labels:
+    {{- include "istio-rollout.labels" . | nindent 4 }}
+spec:
+  args:
+    - name: service-name
+      value: {{ include "istio-rollout.name" . }}
+  metrics:
+    - name: service-up
+      interval: {{ .Values.analysis.interval }}
+      count: {{ .Values.analysis.count }}
+      failureLimit: {{ .Values.analysis.failureLimit }}
+      successCondition: {{ .Values.analysis.successCondition }}
+      provider:
+        prometheus:
+          address: {{ .Values.analysis.prometheusAddress }}
+          query: |
+            sum(up{namespace="{{ .Values.app.namespace }}",service=~"{{ "{{args.service-name}}" }}-(stable|canary)"}) OR on() vector(0)
+{{- end }}

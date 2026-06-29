@@ -12,7 +12,63 @@ outlier detection
 connection pool
 ```
 
-本实验只提供 Runbook 和示例清单，不自动修改当前生效的 `cloudops-gateway-rollout`。
+本实验提供 Runbook、示例清单，以及通过 Helm values 正式启用流量治理的方式。
+
+## GitOps 流量治理配置
+
+`cloudops-gateway-rollout` 已迁移到共享 Helm chart，流量治理参数通过 values 管理：
+
+```text
+dev/backend/rollouts/chart/                  # 共享 istio-rollout chart
+dev/backend/rollouts/cloudops-gateway/values.yaml
+dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
+```
+
+关键 values 段：
+
+```yaml
+trafficPolicy:
+  timeoutRetry:
+    enabled: false
+    timeout: 3s
+    retries:
+      attempts: 2
+      perTryTimeout: 1s
+      retryOn: connect-failure,refused-stream,5xx
+  circuitBreaker:
+    enabled: false
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 50
+```
+
+默认 `enabled: false`，不改变当前运行态。评审通过后修改 values 并 push，由 Argo CD 自动同步。
+
+启用 timeout/retry：
+
+```yaml
+trafficPolicy:
+  timeoutRetry:
+    enabled: true
+```
+
+启用 circuit breaker：
+
+```yaml
+trafficPolicy:
+  circuitBreaker:
+    enabled: true
+```
+
+Argo CD Application 已配置 `ignoreDifferences`，避免 Rollout 调整 VirtualService 权重时被 GitOps 回滚。
 
 ## 适用场景
 
@@ -31,7 +87,7 @@ docs/examples/cloudops-gateway/traffic-policy/virtualservice-timeout-retry.yaml
 docs/examples/cloudops-gateway/traffic-policy/destinationrule-circuit-breaker.yaml
 ```
 
-这些示例不在 Argo CD Application 路径下，不会自动生效。正式应用前需要结合当前 Rollout 和 VirtualService 状态进行人工评审。
+这些示例用于手工演练参考。正式环境请优先修改 `dev/backend/rollouts/cloudops-gateway/values.yaml` 中的 `trafficPolicy` 段。
 
 ## Timeout / Retry 策略
 
@@ -96,7 +152,32 @@ kubectl -n cloudops-dev get rollout cloudops-gateway-rollout
 kubectl -n cloudops-dev get virtualservice cloudops-gateway-rollout -o yaml | grep -A30 'http:'
 ```
 
-### 2. 应用 timeout/retry 示例
+### 2. 通过 values 启用 timeout/retry（推荐）
+
+编辑 `dev/backend/rollouts/cloudops-gateway/values.yaml`：
+
+```yaml
+trafficPolicy:
+  timeoutRetry:
+    enabled: true
+```
+
+提交并 push 后，Argo CD 会自动同步 VirtualService。
+
+验证：
+
+```bash
+helm template cloudops-gateway-rollout dev/backend/rollouts/chart \
+  -f dev/backend/rollouts/cloudops-gateway/values.yaml \
+  --set trafficPolicy.timeoutRetry.enabled=true | grep -A6 'timeout:'
+
+kubectl -n cloudops-dev get virtualservice cloudops-gateway-rollout -o yaml | grep -A10 'timeout:'
+
+curl -k https://api.cloudops.jianggan.cn/readyz
+curl -k https://api.cloudops.jianggan.cn/api/v1/version
+```
+
+### 2b. 手工应用 timeout/retry 示例（仅演练）
 
 ```bash
 kubectl apply -f docs/examples/cloudops-gateway/traffic-policy/virtualservice-timeout-retry.yaml
@@ -111,7 +192,25 @@ curl -k https://api.cloudops.jianggan.cn/readyz
 curl -k https://api.cloudops.jianggan.cn/api/v1/version
 ```
 
-### 3. 应用 circuit breaker 示例
+### 3. 通过 values 启用 circuit breaker（推荐）
+
+编辑 `dev/backend/rollouts/cloudops-gateway/values.yaml`：
+
+```yaml
+trafficPolicy:
+  circuitBreaker:
+    enabled: true
+```
+
+提交并 push 后，Argo CD 会自动创建 DestinationRule。
+
+验证：
+
+```bash
+kubectl -n cloudops-dev get destinationrule cloudops-gateway-rollout cloudops-gateway-rollout-canary
+```
+
+### 3b. 手工应用 circuit breaker 示例（仅演练）
 
 ```bash
 kubectl apply -f docs/examples/cloudops-gateway/traffic-policy/destinationrule-circuit-breaker.yaml
@@ -143,11 +242,17 @@ istio_tcp_connections_closed_total
 
 ## 回退方式
 
-恢复 GitOps 中当前 VirtualService：
+通过 values 关闭流量治理：
 
-```bash
-kubectl apply -f dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
+```yaml
+trafficPolicy:
+  timeoutRetry:
+    enabled: false
+  circuitBreaker:
+    enabled: false
 ```
+
+提交并 push 后由 Argo CD 同步。或手工恢复：
 
 删除 DestinationRule：
 
@@ -192,8 +297,8 @@ Istio 指标异常
 ## 后续平台化方向
 
 ```text
-将 timeout/retry/circuit breaker 参数纳入 values 管理
-Release Record 记录流量治理策略版本
+将 timeout/retry/circuit breaker 参数纳入 values 管理   # 已完成
+Release Record 记录流量治理策略版本                      # 已完成
 故障复盘时关联 Istio 指标与灰度阶段
 ```
 

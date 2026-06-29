@@ -100,10 +100,10 @@ stable/canary service 存在
 通过 GitOps 修改：
 
 ```text
-dev/backend/rollouts/cloudops-gateway/rollout.yaml
+dev/backend/rollouts/cloudops-gateway/values.yaml
 ```
 
-将镜像 tag 改为新版本，等待 Argo Rollouts 进入 canary 阶段。
+将 `image.tag` 改为新版本，等待 Argo Rollouts 进入 canary 阶段。
 
 ### 3. 应用 Header / Tenant 路由
 
@@ -147,8 +147,8 @@ curl -k https://api.cloudops.jianggan.cn/api/v1/version
 恢复原 VirtualService：
 
 ```bash
-git checkout -- dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
-kubectl apply -f dev/backend/rollouts/cloudops-gateway/virtualservice.yaml
+git checkout -- dev/backend/rollouts/cloudops-gateway/values.yaml
+# 将 trafficPolicy 相关 enabled 设为 false 后 push，由 Argo CD 同步
 ```
 
 或者通过 Argo CD 重新同步：
