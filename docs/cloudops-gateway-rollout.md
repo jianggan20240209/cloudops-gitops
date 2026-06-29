@@ -31,7 +31,7 @@ source:
   path: dev/backend/rollouts/chart
   helm:
     valueFiles:
-      - ../cloudops-gateway/values.yaml
+      - values/cloudops-gateway.yaml
 ```
 
 流量治理参数在 `values.yaml` 的 `trafficPolicy` 段管理。当前已启用 `timeoutRetry`，详见 [cloudops-gateway-traffic-policy.md](cloudops-gateway-traffic-policy.md)。

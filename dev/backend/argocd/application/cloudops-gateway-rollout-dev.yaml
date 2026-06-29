@@ -11,7 +11,7 @@ spec:
     path: dev/backend/rollouts/chart
     helm:
       valueFiles:
-        - ../cloudops-gateway/values.yaml
+        - values/cloudops-gateway.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: cloudops-dev

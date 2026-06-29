@@ -20,7 +20,7 @@ connection pool
 
 ```text
 dev/backend/rollouts/chart/                  # 共享 istio-rollout chart
-dev/backend/rollouts/cloudops-gateway/values.yaml
+dev/backend/rollouts/chart/values/cloudops-gateway.yaml
 dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
 ```
 
@@ -87,7 +87,7 @@ docs/examples/cloudops-gateway/traffic-policy/virtualservice-timeout-retry.yaml
 docs/examples/cloudops-gateway/traffic-policy/destinationrule-circuit-breaker.yaml
 ```
 
-这些示例用于手工演练参考。正式环境请优先修改 `dev/backend/rollouts/cloudops-gateway/values.yaml` 中的 `trafficPolicy` 段。
+这些示例用于手工演练参考。正式环境请优先修改 `dev/backend/rollouts/chart/values/cloudops-gateway.yaml` 中的 `trafficPolicy` 段。
 
 ## Timeout / Retry 策略
 
@@ -154,7 +154,7 @@ kubectl -n cloudops-dev get virtualservice cloudops-gateway-rollout -o yaml | gr
 
 ### 2. 通过 values 启用 timeout/retry（推荐）
 
-编辑 `dev/backend/rollouts/cloudops-gateway/values.yaml`：
+编辑 `dev/backend/rollouts/chart/values/cloudops-gateway.yaml`：
 
 ```yaml
 trafficPolicy:
@@ -168,7 +168,7 @@ trafficPolicy:
 
 ```bash
 helm template cloudops-gateway-rollout dev/backend/rollouts/chart \
-  -f dev/backend/rollouts/cloudops-gateway/values.yaml \
+  -f dev/backend/rollouts/chart/values/cloudops-gateway.yaml \
   --set trafficPolicy.timeoutRetry.enabled=true | grep -A6 'timeout:'
 
 kubectl -n cloudops-dev get virtualservice cloudops-gateway-rollout -o yaml | grep -A10 'timeout:'
@@ -194,7 +194,7 @@ curl -k https://api.cloudops.jianggan.cn/api/v1/version
 
 ### 3. 通过 values 启用 circuit breaker（推荐）
 
-编辑 `dev/backend/rollouts/cloudops-gateway/values.yaml`：
+编辑 `dev/backend/rollouts/chart/values/cloudops-gateway.yaml`：
 
 ```yaml
 trafficPolicy:
@@ -323,11 +323,12 @@ API: readyz / version 正常
 cloudops-cicd /traffic: 无 timeout/retry 字段
 ```
 
-结论：Git 仓库已切到 Helm chart（`dev/backend/rollouts/chart` + `values.yaml`），但集群上的 Application 资源尚未 `kubectl apply` 更新，因此 `trafficPolicy.timeoutRetry.enabled=true` 未生效。
+结论：Git 仓库已切到 Helm chart，但 Argo CD 无法加载 chart 目录外的 `../cloudops-gateway/values.yaml`，实际仍使用 chart 默认 values（timeoutRetry 关闭）。values 已移入 `chart/values/cloudops-gateway.yaml`。
 
 修复步骤：
 
 ```bash
+git pull
 kubectl apply -f dev/backend/argocd/application/cloudops-gateway-rollout-dev.yaml
 
 kubectl -n argocd annotate application cloudops-gateway-rollout-dev \
@@ -337,6 +338,10 @@ kubectl -n argocd patch application cloudops-gateway-rollout-dev \
   --type merge \
   -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
 
+# 若仍 OutOfSync，查看原因：
+kubectl -n argocd get application cloudops-gateway-rollout-dev \
+  -o jsonpath='{.status.operationState.phase}{" "}{.status.operationState.message}{"\n"}'
+
 bash scripts/verify-cloudops-gateway-rollout-helm.sh
 ```
 
@@ -344,7 +349,7 @@ bash scripts/verify-cloudops-gateway-rollout-helm.sh
 
 ```text
 spec.source.path: dev/backend/rollouts/chart
-spec.source.helm.valueFiles: ../cloudops-gateway/values.yaml
+spec.source.helm.valueFiles: values/cloudops-gateway.yaml
 Argo CD: Synced / Healthy
 VirtualService: timeout=3s, retries.attempts=2
 cloudops-cicd /traffic 显示 timeout/retry

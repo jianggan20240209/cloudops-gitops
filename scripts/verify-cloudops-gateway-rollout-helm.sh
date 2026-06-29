@@ -36,7 +36,9 @@ else
 fi
 
 if [[ -z "$VALUE_FILES" ]]; then
-  warn "Helm valueFiles is empty; expected ../cloudops-gateway/values.yaml"
+  warn "Helm valueFiles is empty; expected values/cloudops-gateway.yaml"
+elif [[ "$VALUE_FILES" != *"values/cloudops-gateway.yaml"* ]]; then
+  warn "Helm valueFiles is '$VALUE_FILES'; expected values/cloudops-gateway.yaml inside chart path."
 else
   pass "Helm valueFiles configured."
 fi
