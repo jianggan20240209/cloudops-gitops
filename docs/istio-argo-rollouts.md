@@ -110,7 +110,8 @@ kubectl -n argocd patch application istio-ingressgateway-monitor-dev \
   --type merge \
   -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
 
-kubectl -n monitoring get podmonitor istio-ingressgateway
+kubectl -n monitoring get podmonitor,servicemonitor istio-ingressgateway
+kubectl -n istio-ingress get svc istio-ingressgateway -o jsonpath='{.spec.ports[*].name}{"\n"}'
 kubectl -n istio-ingress delete podmonitor istio-ingressgateway --ignore-not-found
 kubectl -n istio-ingress get pod -l istio=ingressgateway --show-labels
 bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev

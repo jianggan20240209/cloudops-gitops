@@ -56,7 +56,7 @@ if [[ -n "${GW_POD}" ]]; then
     echo "-- pod ${GW_POD}:${port}/stats/prometheus"
     kubectl -n istio-ingress exec "${GW_POD}" -c istio-proxy -- \
       sh -c "command -v curl >/dev/null && curl -fsS http://127.0.0.1:${port}/stats/prometheus | grep -m1 'istio_requests_total' || wget -qO- http://127.0.0.1:${port}/stats/prometheus | grep -m1 'istio_requests_total'" \
-      2>/dev/null || echo "no istio_requests_total on localhost:${port}"
+      2>/dev/null | head -n1 || echo "no istio_requests_total on localhost:${port}"
   done
 else
   echo "gateway pod not found"
@@ -86,7 +86,7 @@ query "topk(20, sum by (destination_service_name, destination_service, destinati
   | grep -i "${APP}" || echo "(no series matched app name in topk output)"
 
 echo
-echo "== candidate selectors =="
+echo "== candidate selectors (before traffic) =="
 for q in \
   "sum(rate(istio_requests_total{destination_service_name=~\"${APP}-.*\"}[5m]))" \
   "sum(rate(istio_requests_total{destination_service=~\"${APP}-.*${NS}.svc.cluster.local\"}[5m]))" \
@@ -97,3 +97,26 @@ do
   query "${q}" | head -c 1500
   echo
 done
+
+echo
+echo "== generate ingress traffic (30x /readyz) =="
+for _ in $(seq 1 30); do
+  curl -k -s https://api.cloudops.jianggan.cn/readyz >/dev/null || true
+done
+echo "done"
+
+echo
+echo "== candidate selectors (after traffic, wait 15s for scrape) =="
+sleep 15
+for q in \
+  "sum(rate(istio_requests_total{destination_service_name=~\"${APP}-.*\"}[1m]))" \
+  "sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\",destination_service_namespace=\"${NS}\",destination_service=~\"${APP}-.*\"}[1m]))"
+do
+  echo "-- ${q}"
+  query "${q}" | head -c 1500
+  echo
+done
+
+echo
+echo "== gateway service ports (expect http-envoy-prom) =="
+kubectl -n istio-ingress get svc istio-ingressgateway -o jsonpath='{.spec.ports[*].name}{"\n"}' 2>/dev/null || true
