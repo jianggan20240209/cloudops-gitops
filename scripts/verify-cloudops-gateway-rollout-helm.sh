@@ -90,6 +90,14 @@ else
 fi
 
 echo
+echo "== warm ingress traffic for istio metrics =="
+for _ in $(seq 1 30); do
+  curl -k -s "https://api.cloudops.jianggan.cn/readyz" >/dev/null || true
+done
+sleep 15
+pass "Generated ingress traffic for Prometheus rate() window."
+
+echo
 echo "== cloudops-cicd observability =="
 OBS_CODE=$(curl -k -s -o /tmp/cloudops-observability.json -w '%{http_code}' \
   "https://cloudops.jianggan.cn/api/v1/cicd/apps/$NAME/observability" || true)
@@ -100,6 +108,8 @@ if [[ "$OBS_CODE" == "200" ]]; then
     pass "cloudops-cicd /observability reports istio request_rate_rps."
   elif grep -q 'matched_selector' /tmp/cloudops-observability.json; then
     pass "cloudops-cicd /observability is available (matched_selector present)."
+  elif grep -q '"stage":"stable"' /tmp/cloudops-observability.json; then
+    warn "cloudops-cicd /observability returns canary_stage but no istio metrics yet. Run scripts/discover-istio-metrics.sh and confirm ingress gateway scrape."
   else
     warn "cloudops-cicd /observability has no istio request_rate_rps. Run scripts/discover-istio-metrics.sh in cluster."
   fi
