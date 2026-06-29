@@ -408,12 +408,15 @@ verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
 说明：`istio_metrics` 若仍无 `request_rate_rps`，先确认 Prometheus 是否采集 ingress gateway：
 
 ```bash
-kubectl apply -f dev/platform/argocd/project/dev-platform-project.yaml
+kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-dev.yaml
 kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
+kubectl -n argocd patch application istio-ingressgateway-dev \
+  --type merge \
+  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
 kubectl -n argocd patch application istio-ingressgateway-monitor-dev \
   --type merge \
   -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
-kubectl -n monitoring get podmonitor istio-ingressgateway
+kubectl -n monitoring get podmonitor,servicemonitor istio-ingressgateway
 kubectl -n istio-ingress delete podmonitor istio-ingressgateway --ignore-not-found
 bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
 ```

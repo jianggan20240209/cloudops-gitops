@@ -38,9 +38,9 @@ kubectl -n argocd get application istio-ingressgateway-monitor-dev \
   echo "Application istio-ingressgateway-monitor-dev not found"
 
 echo
-echo "== PodMonitor (expect namespace monitoring) =="
-kubectl -n monitoring get podmonitor istio-ingressgateway 2>/dev/null || \
-  echo "PodMonitor not found in monitoring namespace"
+echo "== PodMonitor + ServiceMonitor (expect namespace monitoring) =="
+kubectl -n monitoring get podmonitor,servicemonitor istio-ingressgateway 2>/dev/null || \
+  echo "Monitor resources not found in monitoring namespace"
 kubectl -n istio-ingress get podmonitor istio-ingressgateway 2>/dev/null && \
   echo "WARN: legacy PodMonitor still in istio-ingress; delete after sync to monitoring"
 
@@ -52,16 +52,21 @@ echo
 echo "== gateway local metrics endpoint =="
 GW_POD="$(kubectl -n istio-ingress get pod -l istio=ingressgateway -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
 if [[ -n "${GW_POD}" ]]; then
-  kubectl -n istio-ingress exec "${GW_POD}" -c istio-proxy -- \
-    wget -qO- http://127.0.0.1:15020/stats/prometheus 2>/dev/null | grep -m1 'istio_requests_total' || \
-    echo "istio_requests_total not found on gateway :15020 (check istio-proxy container)"
+  for port in 15090 15020; do
+    echo "-- pod ${GW_POD}:${port}/stats/prometheus"
+    kubectl -n istio-ingress exec "${GW_POD}" -c istio-proxy -- \
+      sh -c "command -v curl >/dev/null && curl -fsS http://127.0.0.1:${port}/stats/prometheus | grep -m1 'istio_requests_total' || wget -qO- http://127.0.0.1:${port}/stats/prometheus | grep -m1 'istio_requests_total'" \
+      2>/dev/null || echo "no istio_requests_total on localhost:${port}"
+  done
 else
   echo "gateway pod not found"
 fi
 
 echo
-echo "== prometheus scrape target for gateway =="
-query "up{namespace=\"istio-ingress\",pod=~\"istio-ingressgateway.*\"}" | head -c 2000
+echo "== prometheus scrape targets (gateway) =="
+query 'up{namespace="istio-ingress",pod=~"istio-ingressgateway.*"}' | head -c 2000
+echo
+query 'up{namespace="istio-ingress",service="istio-ingressgateway"}' | head -c 2000
 echo
 
 echo "== envoy metrics from gateway pod =="

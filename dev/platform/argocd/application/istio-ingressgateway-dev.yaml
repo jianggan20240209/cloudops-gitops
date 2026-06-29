@@ -18,6 +18,9 @@ spec:
             - name: status-port
               port: 15021
               targetPort: 15021
+            - name: http-envoy-prom
+              port: 15090
+              targetPort: 15090
             - name: http2
               port: 80
               targetPort: 8080

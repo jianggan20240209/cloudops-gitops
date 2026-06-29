@@ -96,10 +96,11 @@ dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
 dev/platform/istio/ingress-gateway-monitor/podmonitor.yaml
 ```
 
-`api.cloudops.jianggan.cn` 流量经过 ingress gateway，但后端 Rollout Pod 默认未注入 sidecar，因此 `istio_requests_total` 需从 **istio-ingressgateway PodMonitor** 采集，而不是应用 Pod 的 ServiceMonitor。
+`api.cloudops.jianggan.cn` 流量经过 ingress gateway，但后端 Rollout Pod 默认未注入 sidecar，因此 `istio_requests_total` 需从 **istio-ingressgateway** 采集。Istio gateway chart 1.30 对外暴露 **`http-envoy-prom`（15090）**，不是 15020。
 
 ```bash
 kubectl apply -f dev/platform/argocd/project/dev-platform-project.yaml
+kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-dev.yaml
 kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
 
 kubectl -n argocd annotate application istio-ingressgateway-monitor-dev \
