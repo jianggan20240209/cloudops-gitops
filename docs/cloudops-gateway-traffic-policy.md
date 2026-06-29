@@ -409,6 +409,9 @@ verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
 
 ```bash
 kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
+kubectl -n argocd patch application istio-ingressgateway-monitor-dev \
+  --type merge \
+  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
 kubectl -n istio-ingress get podmonitor istio-ingressgateway
 bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
 ```

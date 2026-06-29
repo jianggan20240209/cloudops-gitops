@@ -100,9 +100,20 @@ dev/platform/istio/ingress-gateway-monitor/podmonitor.yaml
 
 ```bash
 kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
+
+kubectl -n argocd annotate application istio-ingressgateway-monitor-dev \
+  argocd.argoproj.io/refresh=hard --overwrite
+
+kubectl -n argocd patch application istio-ingressgateway-monitor-dev \
+  --type merge \
+  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
+
 kubectl -n istio-ingress get podmonitor istio-ingressgateway
+kubectl -n istio-ingress get pod -l istio=ingressgateway --show-labels
 bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
 ```
+
+harbor-server 在集群外执行 `discover-istio-metrics.sh` 时，脚本会自动通过 `kubectl -n monitoring run curl` 访问 Prometheus，无需解析 `*.svc.cluster.local`。
 
 部署 Istio demo：
 
