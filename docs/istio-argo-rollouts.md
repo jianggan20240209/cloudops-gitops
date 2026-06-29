@@ -89,6 +89,21 @@ kubectl -n istio-ingress get svc
 
 将 `istio-rollouts-demo.jianggan.cn` 解析到 `istio-ingressgateway` 的 LoadBalancer IP。
 
+Istio ingress gateway Prometheus 采集：
+
+```text
+dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
+dev/platform/istio/ingress-gateway-monitor/podmonitor.yaml
+```
+
+`api.cloudops.jianggan.cn` 流量经过 ingress gateway，但后端 Rollout Pod 默认未注入 sidecar，因此 `istio_requests_total` 需从 **istio-ingressgateway PodMonitor** 采集，而不是应用 Pod 的 ServiceMonitor。
+
+```bash
+kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
+kubectl -n istio-ingress get podmonitor istio-ingressgateway
+bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
+```
+
 部署 Istio demo：
 
 ```bash

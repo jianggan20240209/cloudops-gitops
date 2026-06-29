@@ -405,7 +405,15 @@ GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
 verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
 ```
 
-说明：`istio_metrics` 若仍无 `request_rate_rps`，在集群内运行 `bash scripts/discover-istio-metrics.sh` 查看 Prometheus 实际标签；`cloudops-cicd` 已支持多标签 fallback（`destination_service_name` / `destination_service` / `destination_workload` / ingress 出站），需 Jenkins 重新部署后生效。
+说明：`istio_metrics` 若仍无 `request_rate_rps`，先确认 Prometheus 是否采集 ingress gateway：
+
+```bash
+kubectl apply -f dev/platform/argocd/application/istio-ingressgateway-monitor-dev.yaml
+kubectl -n istio-ingress get podmonitor istio-ingressgateway
+bash scripts/discover-istio-metrics.sh cloudops-gateway-rollout cloudops-dev
+```
+
+`count(istio_requests_total)` 为 0 表示尚未 scrape Istio；PodMonitor 同步后等待 1-2 分钟再产生流量并重试 `/observability`。`cloudops-cicd` 已支持多标签 fallback，需 Jenkins 重新部署后生效。
 
 Prometheus 标签排查：
 
