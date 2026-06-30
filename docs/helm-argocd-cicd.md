@@ -859,7 +859,26 @@ cloudops-platform:
   0ee5b9d Remove hardcoded home proxy from Kaniko Jenkins pipelines.
 ```
 
-公司网络下 Jenkins Kaniko Pipeline 不再硬编码 `192.168.1.50:7890` 代理；`HTTP_PROXY` / `HTTPS_PROXY` / 小写变量保留为空值，避免 Docker build arg 在 `set -u` 下未定义。
+公司网络下 Jenkins Kaniko Pipeline 通过 `192.168.1.50:7890` 访问 GitHub：
+
+```text
+Kaniko Pod env: HTTP_PROXY / HTTPS_PROXY / http_proxy / https_proxy
+Pipeline environment: 同上
+Prepare Git stage:
+  git config --global http.proxy http://192.168.1.50:7890
+  git config --global https.proxy http://192.168.1.50:7890
+```
+
+注意：若失败发生在 **Loading pipeline from SCM**（尚未进入任何 stage），需在 **Jenkins 控制器** 配置全局 Git 代理，而不仅是 Jenkinsfile 内：
+
+```bash
+# Jenkins 控制器或 agent 上
+git config --global http.proxy http://192.168.1.50:7890
+git config --global https.proxy http://192.168.1.50:7890
+git config --global http.version HTTP/1.1
+```
+
+或在 **Manage Jenkins → System → HTTP Proxy** 填写 `192.168.1.50:7890`。
 
 部署步骤：
 
