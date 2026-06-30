@@ -9,6 +9,11 @@ ARGOCD_APP="${ARGOCD_APP:-cloudops-cicd-dev}"
 PLATFORM_DIR="${PLATFORM_DIR:-$HOME/tools/cloudops-platform}"
 PLATFORM_REPO="${PLATFORM_REPO:-https://github.com/jianggan20240209/cloudops-platform.git}"
 
+if ! docker pull harbor-server.jianggan.cn/base/golang:1.23-alpine >/dev/null 2>&1; then
+  echo "WARN: harbor base image missing. On harbor-server run:"
+  echo "  bash scripts/mirror-harbor-base-images.sh"
+fi
+
 echo "== clone or update cloudops-platform =="
 if [[ -d "${PLATFORM_DIR}/.git" ]]; then
   git -C "${PLATFORM_DIR}" fetch origin main

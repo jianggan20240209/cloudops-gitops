@@ -1163,10 +1163,14 @@ cloudops-web / 返回前端 HTML 页面
    原因: Kaniko Pod 有 HTTP_PROXY / HTTPS_PROXY，但 Dockerfile RUN 阶段没有自动继承这些环境变量。
    修复: Dockerfile 声明 HTTP_PROXY / HTTPS_PROXY / NO_PROXY 等 build args，Jenkinsfile 调用 /kaniko/executor 时通过 --build-arg 显式传入代理变量。
 
-8. Kaniko 拉取 Docker Hub 基础镜像失败 unexpected EOF。
-   现象: Retrieving image golang:1.23-alpine from registry index.docker.io 后，Unpacking rootfs 报 failed to get filesystem from image: unexpected EOF。
-   原因: Kaniko Pod 的 HTTP_PROXY 会代理 docker.io 大镜像层下载，代理不稳定时层数据截断。
-   修复: NO_PROXY 增加 docker.io、registry-1.docker.io、auth.docker.io、index.docker.io、production.cloudflare.docker.com 及内网地址；Kaniko 增加 --image-download-retry=3 与 --image-fs-extract-retry=3。go mod download 仍走 proxy.golang.org 代理。
+8. Kaniko 拉取 Docker Hub 基础镜像失败。
+   现象 A: Unpacking rootfs 报 failed to get filesystem from image: unexpected EOF（经 HTTP 代理拉大层）。
+   现象 B: Get "https://index.docker.io/v2/": dial tcp ... i/o timeout（NO_PROXY 绕过代理后集群无法直连 docker.io）。
+   原因: 家里网络对 Docker Hub 既不能稳定直连，经 Clash 代理拉大镜像层又易截断。
+   修复:
+     1) 在 harbor-server 执行 scripts/mirror-harbor-base-images.sh，将 golang/nginx 等基础镜像同步到 harbor-server.jianggan.cn/base/。
+     2) Dockerfile 使用 harbor 基础镜像，例如 harbor-server.jianggan.cn/base/golang:1.23-alpine。
+     3) go mod download 仍经 HTTP_PROXY 访问 proxy.golang.org。
 ```
 
 ## 10. 后续优化
