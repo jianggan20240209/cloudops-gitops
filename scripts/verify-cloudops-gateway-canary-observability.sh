@@ -43,7 +43,8 @@ rollout_phase() {
 trigger_new_revision() {
   local ts
   ts=$(date -u +%s)
-  kubectl -n "$NS" patch rollout "$NAME" --type=strategic -p "{
+  # Rollout CRD accepts merge/json patch only (not strategic-merge-patch).
+  kubectl -n "$NS" patch rollout "$NAME" --type=merge -p "{
     \"spec\": {
       \"template\": {
         \"metadata\": {

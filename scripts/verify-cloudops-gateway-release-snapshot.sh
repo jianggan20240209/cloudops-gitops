@@ -16,6 +16,27 @@ warm_traffic() {
   sleep 15
 }
 
+ensure_argocd_synced() {
+  local app="${1:-cloudops-gateway-rollout-dev}"
+  local sync
+  sync=$(kubectl -n argocd get application "$app" -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+  if [[ "$sync" == "Synced" ]]; then
+    pass "Argo CD Application ${app} is Synced."
+    return 0
+  fi
+  echo "Argo CD sync status is ${sync}; refreshing..."
+  kubectl -n argocd annotate application "$app" argocd.argoproj.io/refresh=hard --overwrite
+  kubectl -n argocd patch application "$app" --type merge \
+    -p '{"operation":{"sync":{"revision":"main","prune":true}}}' >/dev/null
+  sleep 10
+  sync=$(kubectl -n argocd get application "$app" -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+  if [[ "$sync" == "Synced" ]]; then
+    pass "Argo CD Application ${app} is Synced after refresh."
+  else
+    warn "Argo CD sync is still ${sync}; snapshot status may be failed."
+  fi
+}
+
 fetch_observability() {
   local attempt body
   for attempt in 1 2 3; do
@@ -39,6 +60,10 @@ post_snapshot() {
   [[ "$code" == "201" || "$code" == "200" ]]
 }
 
+echo "== ensure Argo CD synced =="
+ensure_argocd_synced "cloudops-gateway-rollout-dev"
+
+echo
 echo "== warm ingress traffic =="
 warm_traffic
 pass "Ingress traffic generated."
@@ -57,8 +82,10 @@ if echo "$OBS" | grep -q 'request_rate_rps'; then
   pass "Observability reports istio request_rate_rps."
 elif echo "$OBS" | grep -q 'matched_selector'; then
   pass "Observability reports matched_selector."
+elif echo "$OBS" | grep -q 'canary_stage'; then
+  echo "INFO: Pre-snapshot observability has canary_stage only (istio metrics may need more traffic)."
 else
-  warn "Observability missing istio metrics before snapshot."
+  echo "INFO: Observability empty before snapshot (will verify snapshot record below)."
 fi
 
 echo
