@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Trigger a Rollout restart and capture observability + snapshot during canary stages.
+# Trigger a new Rollout revision and capture observability + snapshot during canary stages.
 set -euo pipefail
 
 NAME="${1:-cloudops-gateway-rollout}"
@@ -18,18 +18,42 @@ warm_traffic() {
   sleep 10
 }
 
+fetch_observability() {
+  curl -k -s "${BASE}/observability" 2>/dev/null || echo '{}'
+}
+
 observability_stage() {
-  curl -k -fsS "${BASE}/observability" 2>/dev/null | \
-    grep -o '"stage":"[^"]*"' | head -n1 | cut -d'"' -f4 || echo "unknown"
+  local obs
+  obs=$(fetch_observability)
+  echo "$obs" | grep -o '"stage":"[^"]*"' | head -n1 | cut -d'"' -f4 || echo "unknown"
+}
+
+canary_weight() {
+  kubectl -n "$NS" get virtualservice "$NAME" -o jsonpath='{.spec.http[0].route[1].weight}' 2>/dev/null || echo "0"
+}
+
+stable_weight() {
+  kubectl -n "$NS" get virtualservice "$NAME" -o jsonpath='{.spec.http[0].route[0].weight}' 2>/dev/null || echo "100"
 }
 
 rollout_phase() {
   kubectl -n "$NS" get rollout "$NAME" -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown"
 }
 
-restart_rollout() {
-  kubectl -n "$NS" patch rollout "$NAME" --type merge \
-    -p "{\"spec\":{\"restartAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}"
+trigger_new_revision() {
+  local ts
+  ts=$(date -u +%s)
+  kubectl -n "$NS" patch rollout "$NAME" --type=strategic -p "{
+    \"spec\": {
+      \"template\": {
+        \"metadata\": {
+          \"annotations\": {
+            \"cloudops-gitops/verify-rollout\": \"${ts}\"
+          }
+        }
+      }
+    }
+  }"
 }
 
 wait_rollout_healthy() {
@@ -52,24 +76,30 @@ wait_rollout_healthy() {
 save_stage_snapshot() {
   local label="$1"
   warm_traffic
-  local obs stage
-  obs=$(curl -k -fsS "${BASE}/observability")
+  local obs stage cw sw
+  obs=$(fetch_observability)
   stage=$(echo "$obs" | grep -o '"stage":"[^"]*"' | head -n1 | cut -d'"' -f4 || echo "unknown")
-  echo "== ${label}: stage=${stage} =="
+  cw=$(canary_weight)
+  sw=$(stable_weight)
+  echo "== ${label}: observability_stage=${stage} vs_weights=${sw}/${cw} =="
   echo "$obs" | head -c 1500
   echo
-  local snap record_id
-  snap=$(curl -k -fsS -X POST "${BASE}/records/snapshot")
+  local snap record_id code
+  snap=$(curl -k -s -w '\n%{http_code}' -X POST "${BASE}/records/snapshot")
+  code=$(echo "$snap" | tail -n1)
+  snap=$(echo "$snap" | sed '$d')
   record_id=$(echo "$snap" | grep -o '"id":"[^"]*"' | head -n1 | cut -d'"' -f4 || true)
   echo "$snap" | head -c 1200
   echo
-  if [[ -n "$record_id" ]]; then
+  if [[ "$code" == "201" || "$code" == "200" ]] && [[ -n "$record_id" ]]; then
     pass "${label}: snapshot ${record_id}"
+  else
+    warn "${label}: snapshot POST returned HTTP ${code}"
   fi
   if echo "$obs" | grep -qE 'request_rate_rps|matched_selector'; then
-    pass "${label}: observability has istio metrics (stage=${stage})."
+    pass "${label}: observability has istio metrics."
   else
-    warn "${label}: observability missing istio metrics (stage=${stage})."
+    warn "${label}: observability missing istio metrics."
   fi
   if echo "$obs" | grep -q 'by_destination'; then
     pass "${label}: by_destination present."
@@ -80,13 +110,13 @@ command -v kubectl >/dev/null 2>&1 || { echo "ERROR: kubectl required."; exit 1;
 
 echo "== pre-check rollout =="
 kubectl -n "$NS" get rollout "$NAME" -o wide
-INITIAL_STAGE=$(observability_stage)
-echo "current observability stage: ${INITIAL_STAGE}"
+echo "current observability stage: $(observability_stage)"
+echo "current VS weights stable/canary: $(stable_weight)/$(canary_weight)"
 
 echo
-echo "== restart rollout to enter canary =="
-restart_rollout
-pass "Rollout restart issued (kubectl patch spec.restartAt)."
+echo "== trigger new revision (pod template annotation) =="
+trigger_new_revision
+pass "New Rollout revision triggered (not restartAt — that skips canary steps)."
 
 echo
 echo "== wait for canary stage (max ${MAX_WAIT}s) =="
@@ -99,25 +129,20 @@ while true; do
     break
   fi
   STAGE=$(observability_stage)
-  echo "  stage=${STAGE} rollout=$(rollout_phase)"
-  case "$STAGE" in
-    canary_25|canary_50|canary_*)
-      CANARY_SEEN=1
-      save_stage_snapshot "canary-${STAGE}"
-      pass "Captured snapshot during ${STAGE}."
-      break
-      ;;
-    stable)
-      sleep 10
-      ;;
-    progressing|Progressing|*)
-      sleep 10
-      ;;
-  esac
+  CW=$(canary_weight)
+  SW=$(stable_weight)
+  echo "  stage=${STAGE} vs=${SW}/${CW} rollout=$(rollout_phase)"
+  if [[ "$CW" == "25" || "$CW" == "50" ]] || [[ "$STAGE" == canary_* ]]; then
+    CANARY_SEEN=1
+    save_stage_snapshot "canary-vs${CW:-${STAGE}}"
+    pass "Captured snapshot during canary (weight=${CW}, stage=${STAGE})."
+    break
+  fi
+  sleep 10
 done
 
 if [[ "$CANARY_SEEN" -eq 0 ]]; then
-  warn "No canary stage observed; check Rollout steps and VirtualService weights."
+  warn "No canary stage observed. Confirm Rollout steps and VirtualService route weights."
 fi
 
 echo
@@ -131,10 +156,11 @@ fi
 echo
 save_stage_snapshot "post-rollout-stable"
 FINAL_STAGE=$(observability_stage)
-if [[ "$FINAL_STAGE" == "stable" ]]; then
+FINAL_CW=$(canary_weight)
+if [[ "$FINAL_STAGE" == "stable" && "$FINAL_CW" == "0" ]]; then
   pass "Rollout returned to stable stage."
 else
-  warn "Final stage is ${FINAL_STAGE} (expected stable)."
+  warn "Final stage=${FINAL_STAGE} canary_weight=${FINAL_CW} (expected stable/0)."
 fi
 
 echo

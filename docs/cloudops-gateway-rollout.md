@@ -405,6 +405,6 @@ Checks:
 
 ```bash
 bash scripts/verify-cloudops-gateway-release-snapshot.sh
-bash scripts/verify-cloudops-gateway-canary-observability.sh   # 会 restart Rollout
+bash scripts/verify-cloudops-gateway-canary-observability.sh   # patch pod template 触发新 revision
 bash scripts/verify-cloudops-gateway-circuit-breaker.sh        # 需先 sync circuitBreaker
 ```

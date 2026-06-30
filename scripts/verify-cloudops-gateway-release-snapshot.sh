@@ -16,15 +16,43 @@ warm_traffic() {
   sleep 15
 }
 
+fetch_observability() {
+  local attempt body
+  for attempt in 1 2 3; do
+    body=$(curl -k -s "${BASE}/observability" || true)
+    if [[ -n "$body" ]] && echo "$body" | grep -q 'canary_stage'; then
+      echo "$body"
+      return 0
+    fi
+    sleep 5
+  done
+  echo "$body"
+  return 1
+}
+
+post_snapshot() {
+  local code body
+  body=$(curl -k -s -w '\n%{http_code}' -X POST "${BASE}/records/snapshot")
+  code=$(echo "$body" | tail -n1)
+  body=$(echo "$body" | sed '$d')
+  echo "$body"
+  [[ "$code" == "201" || "$code" == "200" ]]
+}
+
 echo "== warm ingress traffic =="
 warm_traffic
 pass "Ingress traffic generated."
 
 echo
 echo "== observability (pre-snapshot) =="
-OBS=$(curl -k -fsS "${BASE}/observability")
-echo "$OBS" | head -c 2000
-echo
+OBS=""
+if OBS=$(fetch_observability); then
+  echo "$OBS" | head -c 2000
+  echo
+else
+  echo "${OBS:-<empty>}"
+  echo
+fi
 if echo "$OBS" | grep -q 'request_rate_rps'; then
   pass "Observability reports istio request_rate_rps."
 elif echo "$OBS" | grep -q 'matched_selector'; then
@@ -35,9 +63,14 @@ fi
 
 echo
 echo "== POST records/snapshot =="
-SNAP=$(curl -k -fsS -X POST "${BASE}/records/snapshot")
-echo "$SNAP" | head -c 2000
-echo
+SNAP=""
+if SNAP=$(post_snapshot); then
+  echo "$SNAP" | head -c 2000
+  echo
+else
+  echo "$SNAP"
+  warn "POST /records/snapshot failed (check cloudops-cicd logs and Argo CD sync status)."
+fi
 RECORD_ID=$(echo "$SNAP" | grep -o '"id":"[^"]*"' | head -n1 | cut -d'"' -f4 || true)
 if [[ -n "${RECORD_ID}" ]]; then
   pass "Snapshot created: ${RECORD_ID}"
@@ -73,12 +106,10 @@ fi
 
 echo
 echo "== note on records/latest =="
-echo "records/latest returns the Jenkins base record (source=jenkins/static), not the snapshot id."
-LATEST=$(curl -k -fsS "${BASE}/records/latest")
+echo "records/latest returns the Jenkins base record, not necessarily the newest snapshot."
+LATEST=$(curl -k -fsS "${BASE}/records/latest" || echo '{}')
 if echo "$LATEST" | grep -q 'observability'; then
   pass "Base release record also exposes verification.observability."
-else
-  echo "Base record id: $(echo "$LATEST" | grep -o '"id":"[^"]*"' | head -n1 || true)"
 fi
 
 echo

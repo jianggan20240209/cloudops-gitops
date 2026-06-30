@@ -429,7 +429,7 @@ GET /api/v1/cicd/apps/cloudops-gateway-rollout/observability:
 scripts/discover-istio-metrics.sh: PASS（含 traffic warmup 后 rate[1m]≈2）
 verify-cloudops-gateway-rollout-helm.sh: 全部 PASS
 scripts/verify-cloudops-gateway-release-snapshot.sh: 验证 verification.observability 写入快照
-scripts/verify-cloudops-gateway-canary-observability.sh: 重启 Rollout 并在 canary 阶段抓 snapshot
+scripts/verify-cloudops-gateway-canary-observability.sh: patch pod template 触发新 revision 并在 canary 阶段抓 snapshot
 scripts/verify-cloudops-gateway-circuit-breaker.sh: 验证 DestinationRule 与 /traffic 摘要
 ```
 
