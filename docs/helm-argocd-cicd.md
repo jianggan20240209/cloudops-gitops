@@ -1162,6 +1162,11 @@ cloudops-web / 返回前端 HTML 页面
    现象: go mod download 报 dial tcp proxy.golang.org:443 i/o timeout。
    原因: Kaniko Pod 有 HTTP_PROXY / HTTPS_PROXY，但 Dockerfile RUN 阶段没有自动继承这些环境变量。
    修复: Dockerfile 声明 HTTP_PROXY / HTTPS_PROXY / NO_PROXY 等 build args，Jenkinsfile 调用 /kaniko/executor 时通过 --build-arg 显式传入代理变量。
+
+8. Kaniko 拉取 Docker Hub 基础镜像失败 unexpected EOF。
+   现象: Retrieving image golang:1.23-alpine from registry index.docker.io 后，Unpacking rootfs 报 failed to get filesystem from image: unexpected EOF。
+   原因: Kaniko Pod 的 HTTP_PROXY 会代理 docker.io 大镜像层下载，代理不稳定时层数据截断。
+   修复: NO_PROXY 增加 docker.io、registry-1.docker.io、auth.docker.io、index.docker.io、production.cloudflare.docker.com 及内网地址；Kaniko 增加 --image-download-retry=3 与 --image-fs-extract-retry=3。go mod download 仍走 proxy.golang.org 代理。
 ```
 
 ## 10. 后续优化
