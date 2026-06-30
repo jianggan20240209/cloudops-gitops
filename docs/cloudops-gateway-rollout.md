@@ -408,3 +408,21 @@ bash scripts/verify-cloudops-gateway-release-snapshot.sh
 bash scripts/verify-cloudops-gateway-canary-observability.sh   # patch pod template 触发新 revision
 bash scripts/verify-cloudops-gateway-circuit-breaker.sh        # 需先 sync circuitBreaker
 ```
+
+2026-06-30 验证结果：
+
+```text
+circuit breaker:
+  DestinationRule stable/canary 已同步
+  cloudops-cicd /traffic 已返回 destination_rules
+
+canary observability:
+  patch pod template 后进入 canary_25
+  VirtualService 权重 75/25
+  observability 返回 canary_stage + istio_metrics
+  Rollout 最终回到 stable 100/0
+
+snapshot:
+  verification.observability 已写入
+  当前集群 cloudops-cicd 尚未部署 snapshot ID 修复版，仍复用旧 snapshot ID
+```
