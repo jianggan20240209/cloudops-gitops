@@ -881,6 +881,50 @@ bash scripts/verify-cloudops-gateway-release-snapshot.sh
 
 若 snapshot ID 仍为 `...snapshot-20260625154014`，说明线上 `cloudops-cicd` 仍是旧镜像；需确认 Jenkins 构建已完成、`cloudops-cicd-dev` 已 Synced / Healthy，且 Deployment image 已更新到新的 `main-<BUILD_NUMBER>`。
 
+### Jenkins 无法从 GitHub 拉取 Jenkinsfile
+
+现象：
+
+```text
+fatal: unable to access 'https://github.com/jianggan20240209/cloudops-platform.git/':
+GnuTLS, handshake failed: The TLS connection was non-properly terminated.
+```
+
+说明：该错误发生在 Jenkins **加载 Pipeline SCM** 阶段，尚未进入 `Jenkinsfile.cloudops-cicd-kaniko` 的任何 stage。因此修改 Jenkinsfile 内 proxy 或 checkout 逻辑无法解决此问题。
+
+先在 Jenkins 控制器或 agent 上排查：
+
+```bash
+git --version
+curl -I https://github.com
+git ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD
+```
+
+常见修复：
+
+```text
+1. 重试构建（偶发 TLS 中断）
+2. Jenkins 全局 Git 配置 http.version = HTTP/1.1
+3. 确认 Jenkins 未残留家庭代理 192.168.1.50:7890
+4. 若公司出口访问 GitHub 需要企业代理，在 Jenkins System 配置 HTTP Proxy（不是家庭代理）
+5. 改用 SSH 仓库地址 + Deploy Key（绕过 HTTPS GnuTLS 问题）
+```
+
+临时绕过：在 harbor-server 手动构建并部署 `cloudops-cicd`：
+
+```bash
+cd ~/tools/cloudops-gitops
+git pull
+bash scripts/build-cloudops-cicd-manual.sh
+
+kubectl -n cloudops-dev get deploy cloudops-cicd \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+bash scripts/verify-cloudops-gateway-release-snapshot.sh
+bash scripts/verify-cloudops-gateway-release-snapshot.sh
+```
+
+预期：Deployment image 变为新的 `main-<timestamp>`，两次 snapshot ID 不再相同。
+
 第十一版实际验证结果：
 
 ```text
