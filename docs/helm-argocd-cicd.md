@@ -902,6 +902,8 @@ bash scripts/verify-cloudops-gateway-release-snapshot.sh
 
 ### Jenkins 无法从 GitHub 拉取 Jenkinsfile
 
+详细排障见 [jenkins-github-scm-proxy.md](jenkins-github-scm-proxy.md)。
+
 现象：
 
 ```text
