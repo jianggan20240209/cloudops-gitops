@@ -6,13 +6,24 @@ GIT_PROXY="${GIT_PROXY:-http://192.168.1.50:7890}"
 REPO_URL="${REPO_URL:-https://github.com/jianggan20240209/cloudops-platform.git}"
 JENKINS_HOME="${JENKINS_HOME:-${HOME}}"
 
-echo "== Jenkins controller git proxy setup =="
+if [[ ! -d "${JENKINS_HOME}" ]]; then
+  echo "ERROR: JENKINS_HOME=${JENKINS_HOME} does not exist on this host."
+  echo "This script must run ON the Jenkins controller, not harbor-server."
+  echo "Try:"
+  echo "  bash scripts/setup-jenkins-controller-git-proxy-k8s.sh"
+  echo "Or:"
+  echo "  kubectl get pods -A | grep -i jenkins"
+  echo "  JENKINS_NS=<ns> JENKINS_POD=<pod> bash scripts/setup-jenkins-controller-git-proxy-k8s.sh"
+  exit 1
+fi
+
+mkdir -p "${JENKINS_HOME}"
 echo "GIT_PROXY=${GIT_PROXY}"
 echo "JENKINS_HOME=${JENKINS_HOME}"
 
 export HOME="${JENKINS_HOME}"
 
-git config --global http.proxy "${GIT_PROXY}"
+echo "== Jenkins controller git proxy setup =="
 git config --global https.proxy "${GIT_PROXY}"
 git config --global http.version HTTP/1.1
 git config --global http.lowSpeedLimit 0

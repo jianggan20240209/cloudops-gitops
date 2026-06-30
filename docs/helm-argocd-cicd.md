@@ -913,12 +913,11 @@ GnuTLS, handshake failed: The TLS connection was non-properly terminated.
 
 说明：该错误发生在 Jenkins **加载 Pipeline SCM** 阶段，尚未进入 `Jenkinsfile.cloudops-cicd-kaniko` 的任何 stage。因此修改 Jenkinsfile 内 proxy 或 checkout 逻辑无法解决此问题。
 
-先在 Jenkins 控制器或 agent 上排查：
+先在 Jenkins 控制器上排查（harbor-server 可用 kubectl 包装脚本）：
 
 ```bash
-git --version
-curl -I https://github.com
-git ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD
+kubectl get pods -A | grep -i jenkins
+bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
 ```
 
 常见修复：

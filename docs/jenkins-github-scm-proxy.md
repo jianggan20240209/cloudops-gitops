@@ -54,8 +54,14 @@ Jenkins Home 通常在 `/var/jenkins_home`，gitconfig 写入 `/var/jenkins_home
 仓库内提供辅助脚本：
 
 ```bash
-bash scripts/setup-jenkins-controller-git-proxy.sh
+# 在 harbor-server 上通过 kubectl 进入 Jenkins 控制器 Pod 配置
+bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
+
+# 若已知 Jenkins Pod
+JENKINS_NS=jenkins JENKINS_POD=jenkins-0 bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
 ```
+
+不要在本机 harbor-server 直接执行 `JENKINS_HOME=/var/jenkins_home bash scripts/setup-jenkins-controller-git-proxy.sh`，除非当前 shell 就在 Jenkins 控制器内。
 
 ## 2. 验证代理可达
 
