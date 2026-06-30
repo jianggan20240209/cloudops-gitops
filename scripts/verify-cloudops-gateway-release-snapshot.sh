@@ -101,6 +101,9 @@ fi
 RECORD_ID=$(echo "$SNAP" | grep -o '"id":"[^"]*"' | head -n1 | cut -d'"' -f4 || true)
 if [[ -n "${RECORD_ID}" ]]; then
   pass "Snapshot created: ${RECORD_ID}"
+  if [[ "${RECORD_ID}" == *"snapshot-20260625154014" ]]; then
+    warn "Snapshot ID still uses the old image push timestamp. Redeploy cloudops-cicd with cloudops-platform >= b7b2fc8."
+  fi
 else
   warn "Snapshot response missing record id."
 fi

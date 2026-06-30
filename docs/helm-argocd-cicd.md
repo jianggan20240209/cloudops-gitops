@@ -869,6 +869,7 @@ test-cloudops-cicd-kaniko
 
 # 部署完成后验证
 kubectl -n argocd get application cloudops-cicd-dev
+kubectl -n cloudops-dev get deploy cloudops-cicd -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 curl -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records/latest
 
 cd ~/tools/cloudops-gitops
@@ -877,6 +878,8 @@ bash scripts/verify-cloudops-gateway-release-snapshot.sh
 ```
 
 预期：连续两次 `POST /api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot` 返回不同 snapshot ID，且 `verification.observability` 包含 canary_stage / istio_metrics。
+
+若 snapshot ID 仍为 `...snapshot-20260625154014`，说明线上 `cloudops-cicd` 仍是旧镜像；需确认 Jenkins 构建已完成、`cloudops-cicd-dev` 已 Synced / Healthy，且 Deployment image 已更新到新的 `main-<BUILD_NUMBER>`。
 
 第十一版实际验证结果：
 
