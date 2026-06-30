@@ -847,6 +847,37 @@ scripts/discover-istio-metrics.sh: PASS
     cloudops-gateway-rollout-75464d5c7f-2-5: Successful
 ```
 
+### 2026-06-30 cloudops-cicd snapshot ID 修复部署
+
+`cloudops-platform` 已修复 Release Record snapshot ID 生成逻辑：snapshot ID 使用生成时刻，而不是镜像推送时间，避免重复 `POST /records/snapshot` 复用同一个 `...snapshot-20260625154014`。
+
+相关提交：
+
+```text
+cloudops-platform:
+  b7b2fc8 Use snapshot generation time for unique release record snapshot IDs.
+  0ee5b9d Remove hardcoded home proxy from Kaniko Jenkins pipelines.
+```
+
+公司网络下 Jenkins Kaniko Pipeline 不再硬编码 `192.168.1.50:7890` 代理；`HTTP_PROXY` / `HTTPS_PROXY` / 小写变量保留为空值，避免 Docker build arg 在 `set -u` 下未定义。
+
+部署步骤：
+
+```bash
+# Jenkins 手动触发
+test-cloudops-cicd-kaniko
+
+# 部署完成后验证
+kubectl -n argocd get application cloudops-cicd-dev
+curl -k https://cloudops.jianggan.cn/api/v1/cicd/apps/cloudops-cicd/records/latest
+
+cd ~/tools/cloudops-gitops
+git pull
+bash scripts/verify-cloudops-gateway-release-snapshot.sh
+```
+
+预期：连续两次 `POST /api/v1/cicd/apps/cloudops-gateway-rollout/records/snapshot` 返回不同 snapshot ID，且 `verification.observability` 包含 canary_stage / istio_metrics。
+
 第十一版实际验证结果：
 
 ```text
