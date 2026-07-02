@@ -1188,15 +1188,13 @@ cloudops-web / 返回前端 HTML 页面
      2) 或手工: sudo mv .../proxy.conf .../proxy.conf.bak && sudo systemctl daemon-reload && sudo systemctl restart docker
      3) 验证: sudo systemctl show docker --property=Environment 应只有 8.222.223.161:32001，无 192.168.1.50
 
-11. harbor-server 上 docker pull 代理正确但仍 IPv6 超时。
-   现象: Head "https://registry-1.docker.io/v2/...": dial tcp [2a03:2880:...]:443: i/o timeout（无 proxyconnect，说明 dockerd 直连 AAAA 而非经 HTTP 代理）。
-   原因: registry-1.docker.io DNS 返回 IPv6，dockerd/containerd 优先尝试 IPv6，家里网络 IPv6 不可达；与 http-proxy.conf 是否正确无关。
-   修复（任选其一，推荐 1 或 4）:
-     1) 优先 IPv4: sudo bash scripts/fix-harbor-server-docker-proxy.sh --ipv6（写入 /etc/gai.conf `precedence ::ffff:0:0/96 100`）后 systemctl restart docker
-     2) 或手工: echo 'precedence ::ffff:0:0/96  100' | sudo tee -a /etc/gai.conf
-     3) 或禁用 IPv6: sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.default.disable_ipv6=1
-     4) 推荐绕过 dockerd: apt install -y skopeo && source /etc/profile.d/proxy.sh && bash scripts/mirror-harbor-base-images.sh（默认 skopeo 经 HTTP_PROXY 拉 docker.io）
-     5) 验证代理: systemctl show docker --property=Environment；验证拉取: docker pull golang:1.23-alpine 或 skopeo copy 测试
+11. docker pull 报 dial tcp [2a03:2880:...]:443 i/o timeout（IPv6），未出现 proxyconnect。
+   现象: http-proxy.conf 正确，但拉镜像仍直连 registry-1.docker.io 的 IPv6 地址超时。
+   原因: 镜像拉取由 containerd 执行，仅配置 docker.service.d 不会给 containerd 注入 HTTP_PROXY；且系统可能优先解析 IPv6。
+   修复:
+     1) sudo bash scripts/fix-harbor-server-docker-proxy.sh（同步 proxy 到 containerd.service.d，并优先 IPv4）
+     2) 验证: sudo systemctl show containerd --property=Environment 含 HTTP_PROXY
+     3) 仍失败时用 skopeo: source /etc/profile.d/proxy.sh && bash scripts/mirror-harbor-base-images.sh
 ```
 
 ## 10. 后续优化
