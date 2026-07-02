@@ -62,6 +62,19 @@ fix_ipv6_gai() {
 show_unit_env docker
 show_unit_env containerd
 
+verify_proxy_loaded() {
+  local unit="$1"
+  local env
+  env="$(systemctl show "${unit}" --property=Environment --no-pager 2>/dev/null || true)"
+  if [[ "${env}" != *HTTP_PROXY=* ]]; then
+    echo "ERROR: ${unit} has no HTTP_PROXY in Environment." >&2
+    echo "       If proxy password contains %, systemd needs %% (e.g. %%2A not %2A)." >&2
+    echo "       Or use literal * in password: w16y*3w2g862" >&2
+    return 1
+  fi
+  return 0
+}
+
 echo "== docker drop-ins =="
 ls -la "${DOCKER_DROPIN_DIR}/" 2>/dev/null || echo "(none)"
 for f in "${DOCKER_DROPIN_DIR}"/*; do
@@ -114,6 +127,10 @@ systemctl restart docker
 echo
 show_unit_env docker
 show_unit_env containerd
+
+if ! verify_proxy_loaded docker || ! verify_proxy_loaded containerd; then
+  exit 1
+fi
 
 echo "PASS: proxy applied to docker + containerd."
 if [[ "${FIX_IPV6}" != "1" ]]; then

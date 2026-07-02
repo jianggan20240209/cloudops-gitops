@@ -1195,6 +1195,11 @@ cloudops-web / 返回前端 HTML 页面
      1) sudo bash scripts/fix-harbor-server-docker-proxy.sh（同步 proxy 到 containerd.service.d，并优先 IPv4）
      2) 验证: sudo systemctl show containerd --property=Environment 含 HTTP_PROXY
      3) 仍失败时用 skopeo: source /etc/profile.d/proxy.sh && bash scripts/mirror-harbor-base-images.sh
+
+12. systemctl show docker 只有 NO_PROXY，没有 HTTP_PROXY。
+   现象: Environment=NO_PROXY=... 一行，看不到 HTTP_PROXY/HTTPS_PROXY。
+   原因: systemd unit 中 % 是转义符；密码 URL 编码 %2A 写成 %2A 会导致 HTTP_PROXY 行解析失败。
+   修复: http-proxy.conf 中密码改用明文 *（w16y*3w2g862），或 % 写成 %%（w16y%%2A3w2g862）；同步到 containerd.service.d 后 daemon-reload && restart。
 ```
 
 ## 10. 后续优化
