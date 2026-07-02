@@ -5,7 +5,7 @@ set -euo pipefail
 
 HARBOR="${HARBOR:-harbor-server.jianggan.cn}"
 PROJECT="${PROJECT:-base}"
-PROXY="${HTTP_PROXY:-http://192.168.1.50:7890}"
+PROXY="${HTTP_PROXY:-${http_proxy:-}}"
 DEST_CERT_DIR="${DEST_CERT_DIR:-/etc/docker/certs.d/${HARBOR}}"
 AUTH_FILE="${AUTH_FILE:-${DOCKER_CONFIG:-$HOME/.docker}/config.json}"
 PULL_TOOL="${PULL_TOOL:-auto}" # auto | skopeo | crane | docker
@@ -96,6 +96,11 @@ pick_tool() {
 TOOL="$(pick_tool || true)"
 if [[ -z "${TOOL}" ]]; then
   echo "ERROR: need skopeo, crane, or docker. Recommended: apt install -y skopeo" >&2
+  exit 1
+fi
+
+if [[ -z "${PROXY}" ]]; then
+  echo "ERROR: HTTP_PROXY not set. Run: source /etc/profile.d/proxy.sh" >&2
   exit 1
 fi
 

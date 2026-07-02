@@ -1179,6 +1179,14 @@ cloudops-web / 返回前端 HTML 页面
      1) 推荐: apt install -y skopeo 后执行 bash scripts/mirror-harbor-base-images.sh（脚本默认用 skopeo 经家里代理拉 docker.io）。
      2) 或手工: HTTP_PROXY=http://192.168.1.50:7890 skopeo copy docker://docker.io/library/golang:1.23-alpine docker://harbor-server.jianggan.cn/base/golang:1.23-alpine
      3) 或修改 /etc/docker/daemon.json 删除 registry-mirrors，并为 dockerd 配置 HTTP 代理后 systemctl restart docker。
+
+10. dockerd 已配新代理但仍走 192.168.1.50:7890。
+   现象: proxyconnect tcp: dial tcp 192.168.1.50:7890: connect: connection refused，而 http-proxy.conf 已是新地址。
+   原因: /etc/systemd/system/docker.service.d/ 同时存在 proxy.conf（旧 Clash）与 http-proxy.conf（新代理），后者被前者覆盖。
+   修复:
+     1) sudo bash scripts/fix-harbor-server-docker-proxy.sh（自动备份并移除 proxy.conf）
+     2) 或手工: sudo mv .../proxy.conf .../proxy.conf.bak && sudo systemctl daemon-reload && sudo systemctl restart docker
+     3) 验证: sudo systemctl show docker --property=Environment 应只有 8.222.223.161:32001，无 192.168.1.50
 ```
 
 ## 10. 后续优化
