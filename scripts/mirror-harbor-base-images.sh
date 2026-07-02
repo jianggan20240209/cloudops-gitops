@@ -109,13 +109,7 @@ fi
 
 if [[ -z "${PROXY}" ]]; then
   echo "ERROR: HTTP_PROXY not set. Run: source /etc/profile.d/proxy.sh" >&2
-  echo "       (or install /etc/profile.d/proxy.sh from scripts/harbor-server-profile-proxy.sh.example)" >&2
   exit 1
-fi
-
-if [[ "${TOOL}" == "docker" ]]; then
-  echo "WARN: using docker pull; skopeo avoids dockerd IPv6/registry-mirror issues." >&2
-  echo "      Recommended: apt install -y skopeo" >&2
 fi
 
 echo "Harbor project: ${HARBOR}/${PROJECT}"

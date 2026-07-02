@@ -1,0 +1,13 @@
+# /etc/profile.d/proxy.sh — harbor-server 系统级 HTTP/HTTPS 代理
+# 复制到系统: sudo tee /etc/profile.d/proxy.sh < scripts/harbor-server-profile-proxy.sh.example
+# 将 PROXY_URL 替换为实际带认证代理地址后生效: source /etc/profile.d/proxy.sh
+
+PROXY_URL="${PROXY_URL:-http://USER:PASS@8.222.223.161:32001}"
+NO_PROXY_LIST="${NO_PROXY_LIST:-localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,192.168.1.50,192.168.1.200}"
+
+export HTTP_PROXY="${PROXY_URL}"
+export HTTPS_PROXY="${PROXY_URL}"
+export http_proxy="${PROXY_URL}"
+export https_proxy="${PROXY_URL}"
+export NO_PROXY="${NO_PROXY_LIST}"
+export no_proxy="${NO_PROXY_LIST}"

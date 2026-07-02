@@ -1,0 +1,11 @@
+# /etc/systemd/system/docker.service.d/http-proxy.conf
+# docker pull 需单独为 dockerd 配置代理（shell 环境变量无效）
+# 应用:
+#   sudo mkdir -p /etc/systemd/system/docker.service.d
+#   # 编辑下方 PROXY_URL 后写入 http-proxy.conf
+#   sudo systemctl daemon-reload && sudo systemctl restart docker
+
+[Service]
+Environment="HTTP_PROXY=http://USER:PASS@8.222.223.161:32001"
+Environment="HTTPS_PROXY=http://USER:PASS@8.222.223.161:32001"
+Environment="NO_PROXY=localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,192.168.1.50,192.168.1.200"
