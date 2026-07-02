@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 # Mirror Docker Hub base images into Harbor for Kaniko builds.
-# Prefer skopeo/crane (honor HTTP_PROXY, bypass broken docker daemon registry-mirrors).
+# Prefer skopeo/crane (honor HTTP_PROXY, bypass dockerd registry-mirrors and IPv6 AAAA).
 set -euo pipefail
 
 HARBOR="${HARBOR:-harbor-server.jianggan.cn}"
 PROJECT="${PROJECT:-base}"
+
+if [[ -z "${HTTP_PROXY:-${http_proxy:-}}" && -f /etc/profile.d/proxy.sh ]]; then
+  # shellcheck source=/dev/null
+  source /etc/profile.d/proxy.sh
+fi
 PROXY="${HTTP_PROXY:-${http_proxy:-}}"
 DEST_CERT_DIR="${DEST_CERT_DIR:-/etc/docker/certs.d/${HARBOR}}"
 AUTH_FILE="${AUTH_FILE:-${DOCKER_CONFIG:-$HOME/.docker}/config.json}"
@@ -71,6 +76,9 @@ docker_copy() {
     echo "      Install skopeo: apt install -y skopeo"
     echo "      Or remove registry-mirrors and configure docker daemon HTTP proxy."
   fi
+  echo "WARN: docker pull may dial registry-1.docker.io over IPv6 and timeout."
+  echo "      Prefer: apt install -y skopeo && PULL_TOOL=skopeo bash $0"
+  echo "      Or: sudo bash scripts/fix-harbor-server-docker-proxy.sh --ipv6"
 
   docker pull "${name_tag}"
   docker tag "${name_tag}" "${harbor_image}"
@@ -101,7 +109,13 @@ fi
 
 if [[ -z "${PROXY}" ]]; then
   echo "ERROR: HTTP_PROXY not set. Run: source /etc/profile.d/proxy.sh" >&2
+  echo "       (or install /etc/profile.d/proxy.sh from scripts/harbor-server-profile-proxy.sh.example)" >&2
   exit 1
+fi
+
+if [[ "${TOOL}" == "docker" ]]; then
+  echo "WARN: using docker pull; skopeo avoids dockerd IPv6/registry-mirror issues." >&2
+  echo "      Recommended: apt install -y skopeo" >&2
 fi
 
 echo "Harbor project: ${HARBOR}/${PROJECT}"
