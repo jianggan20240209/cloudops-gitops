@@ -219,16 +219,7 @@ kubectl run jenkins-chown -n devops --restart=Never --rm -i \
 kubectl -n devops delete pod jenkins-0
 ```
 
-**持久修复：** values 中 `runAsUser`/`fsGroup: 1000` + `customInitContainers` 在 init 前 chown（见 `values-dev.yaml`）；init 镜像使用 `harbor-server.jianggan.cn/library/busybox:1.36`（见下节）。
-
-### Harbor 镜像命名约定
-
-外部镜像同步到 Harbor 时**只替换 registry 域名**，路径与 tag 保持不变：
-
-| 外部 | Harbor |
-|------|--------|
-| `docker.io/library/busybox:1.36` | `harbor-server.jianggan.cn/library/busybox:1.36` |
-| `docker.io/library/golang:1.23-alpine` | `harbor-server.jianggan.cn/library/golang:1.23-alpine` |
+**持久修复：** values 中 `runAsUser`/`fsGroup: 1000` + `fsGroupChangePolicy: OnRootMismatch`（见 `values-dev.yaml`）。**不要**在 `runAsUser: 1000` 的 Pod 里加 `runAsUser: 0` 的 `customInitContainers`——Helm chart 会设置 `runAsNonRoot: true`，kubelet 会报 `runAsUser breaks non-root policy`。
 
 ### `fix-jenkins-home-perms` busybox ErrImagePull
 
@@ -246,13 +237,28 @@ docker push harbor-server.jianggan.cn/library/busybox:1.36
 bash ~/tools/cloudops-gitops/scripts/mirror-harbor-base-images.sh
 ```
 
-**values 中改用内网镜像：**
+**values 中勿加 root chown init**（与 `runAsNonRoot` 冲突）；一次性 chown 见上一节。
 
-```yaml
-customInitContainers:
-  - name: fix-jenkins-home-perms
-    image: harbor-server.jianggan.cn/library/busybox:1.36
+### Harbor 镜像命名约定
+
+外部镜像同步到 Harbor 时**只替换 registry 域名**，路径与 tag 保持不变：
+
+| 外部 | Harbor |
+|------|--------|
+| `docker.io/library/busybox:1.36` | `harbor-server.jianggan.cn/library/busybox:1.36` |
+| `docker.io/library/golang:1.23-alpine` | `harbor-server.jianggan.cn/library/golang:1.23-alpine` |
+
+### `runAsUser breaks non-root policy`（customInitContainers）
+
+Helm values 中 `controller.runAsUser: 1000` 时，Pod 会带 `runAsNonRoot: true`。若 `customInitContainers` 里 `runAsUser: 0` 做 chown，kubelet 报：
+
+```text
+CreateContainerConfigError: container's runAsUser breaks non-root policy
 ```
+
+**修复：** 删除 `customInitContainers`（`customInitContainers: []`），依赖 `fsGroup`；若 PVC 上仍有 root 文件，用上一节一次性 chown Job。
+
+### `fix-jenkins-home-perms` busybox ErrImagePull（历史，已不推荐 customInitContainers）
 
 ### k8s-sidecar ErrImagePull
 
