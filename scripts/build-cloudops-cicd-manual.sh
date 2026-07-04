@@ -9,7 +9,7 @@ ARGOCD_APP="${ARGOCD_APP:-cloudops-cicd-dev}"
 PLATFORM_DIR="${PLATFORM_DIR:-$HOME/tools/cloudops-platform}"
 PLATFORM_REPO="${PLATFORM_REPO:-https://github.com/jianggan20240209/cloudops-platform.git}"
 
-if ! docker pull harbor-server.jianggan.cn/base/golang:1.23-alpine >/dev/null 2>&1; then
+if ! docker pull harbor-server.jianggan.cn/library/golang:1.23-alpine >/dev/null 2>&1; then
   echo "WARN: harbor base image missing. On harbor-server run:"
   echo "  bash scripts/mirror-harbor-base-images.sh"
 fi

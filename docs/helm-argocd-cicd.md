@@ -1168,8 +1168,8 @@ cloudops-web / 返回前端 HTML 页面
    现象 B: Get "https://index.docker.io/v2/": dial tcp ... i/o timeout（NO_PROXY 绕过代理后集群无法直连 docker.io）。
    原因: 家里网络对 Docker Hub 既不能稳定直连，经 Clash 代理拉大镜像层又易截断。
    修复:
-     1) 在 harbor-server 执行 scripts/mirror-harbor-base-images.sh，将 golang/nginx 等基础镜像同步到 harbor-server.jianggan.cn/base/。
-     2) Dockerfile 使用 harbor 基础镜像，例如 harbor-server.jianggan.cn/base/golang:1.23-alpine。
+     1) 在 harbor-server 执行 scripts/mirror-harbor-base-images.sh，将 golang/nginx 等基础镜像同步到 harbor-server.jianggan.cn/library/。
+     2) Dockerfile 使用 harbor 基础镜像，例如 harbor-server.jianggan.cn/library/golang:1.23-alpine。
      3) go mod download 仍经 HTTP_PROXY 访问 proxy.golang.org。
 
 9. harbor-server 上 docker pull 走 daocloud 镜像源 TLS 超时。
@@ -1177,7 +1177,7 @@ cloudops-web / 返回前端 HTML 页面
    原因: /etc/docker/daemon.json 配置了 registry-mirrors，docker pull 不会使用 shell 的 HTTP_PROXY，且 daocloud 镜像源不可达。
    修复:
      1) 推荐: apt install -y skopeo 后执行 bash scripts/mirror-harbor-base-images.sh（脚本默认用 skopeo 经家里代理拉 docker.io）。
-     2) 或手工: HTTP_PROXY=http://192.168.1.50:7890 skopeo copy docker://docker.io/library/golang:1.23-alpine docker://harbor-server.jianggan.cn/base/golang:1.23-alpine
+     2) 或手工: HTTP_PROXY=http://192.168.1.50:7890 skopeo copy docker://docker.io/library/golang:1.23-alpine docker://harbor-server.jianggan.cn/library/golang:1.23-alpine
      3) 或修改 /etc/docker/daemon.json 删除 registry-mirrors，并为 dockerd 配置 HTTP 代理后 systemctl restart docker。
 
 10. dockerd 已配新代理但仍走 192.168.1.50:7890。

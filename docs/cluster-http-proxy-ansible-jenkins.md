@@ -213,13 +213,46 @@ cp: cannot create regular file '/var/jenkins_home/casc_configs/proxy.yaml': Perm
 
 ```bash
 kubectl run jenkins-chown -n devops --restart=Never --rm -i \
-  --image=busybox:1.36 \
-  --overrides='{"spec":{"containers":[{"name":"chown","image":"busybox:1.36","command":["sh","-c","chown -R 1000:1000 /var/jenkins_home && ls -ld /var/jenkins_home /var/jenkins_home/casc_configs"],"securityContext":{"runAsUser":0},"volumeMounts":[{"name":"home","mountPath":"/var/jenkins_home"}]}],"volumes":[{"name":"home","persistentVolumeClaim":{"claimName":"jenkins"}}]}}'
+  --image=harbor-server.jianggan.cn/library/busybox:1.36 \
+  --overrides='{"spec":{"containers":[{"name":"chown","image":"harbor-server.jianggan.cn/library/busybox:1.36","command":["sh","-c","chown -R 1000:1000 /var/jenkins_home && ls -ld /var/jenkins_home /var/jenkins_home/casc_configs"],"securityContext":{"runAsUser":0},"volumeMounts":[{"name":"home","mountPath":"/var/jenkins_home"}]}],"volumes":[{"name":"home","persistentVolumeClaim":{"claimName":"jenkins"}}]}}'
 
 kubectl -n devops delete pod jenkins-0
 ```
 
-**持久修复：** values 中 `runAsUser`/`fsGroup: 1000` + `customInitContainers` 在 init 前 chown（见 `values-dev.yaml`）。
+**持久修复：** values 中 `runAsUser`/`fsGroup: 1000` + `customInitContainers` 在 init 前 chown（见 `values-dev.yaml`）；init 镜像使用 `harbor-server.jianggan.cn/library/busybox:1.36`（见下节）。
+
+### Harbor 镜像命名约定
+
+外部镜像同步到 Harbor 时**只替换 registry 域名**，路径与 tag 保持不变：
+
+| 外部 | Harbor |
+|------|--------|
+| `docker.io/library/busybox:1.36` | `harbor-server.jianggan.cn/library/busybox:1.36` |
+| `docker.io/library/golang:1.23-alpine` | `harbor-server.jianggan.cn/library/golang:1.23-alpine` |
+
+### `fix-jenkins-home-perms` busybox ErrImagePull
+
+`customInitContainers` 若使用 `docker.io/library/busybox:1.36`，集群经外网代理拉 Docker Hub 常失败（`connection reset by peer`）。
+
+**一次性同步到 Harbor（harbor-server，国内 DaoCloud 源，无需 Docker Hub）：**
+
+```bash
+# 确保 Harbor 已有 library 项目
+docker pull docker.m.daocloud.io/library/busybox:1.36
+docker tag docker.m.daocloud.io/library/busybox:1.36 harbor-server.jianggan.cn/library/busybox:1.36
+docker push harbor-server.jianggan.cn/library/busybox:1.36
+
+# 或批量脚本（busybox 已配置为 DaoCloud 源）
+bash ~/tools/cloudops-gitops/scripts/mirror-harbor-base-images.sh
+```
+
+**values 中改用内网镜像：**
+
+```yaml
+customInitContainers:
+  - name: fix-jenkins-home-perms
+    image: harbor-server.jianggan.cn/library/busybox:1.36
+```
 
 ### k8s-sidecar ErrImagePull
 

@@ -4,7 +4,8 @@
 set -euo pipefail
 
 HARBOR="${HARBOR:-harbor-server.jianggan.cn}"
-PROJECT="${PROJECT:-base}"
+# 镜像路径与 Docker Hub 一致，仅替换 registry 域名：
+#   docker.io/library/busybox:1.36 -> harbor-server.jianggan.cn/library/busybox:1.36
 
 if [[ -z "${HTTP_PROXY:-${http_proxy:-}}" && -f /etc/profile.d/proxy.sh ]]; then
   # shellcheck source=/dev/null
@@ -18,27 +19,36 @@ PULL_TOOL="${PULL_TOOL:-auto}" # auto | skopeo | crane | docker
 IMAGES=(
   "golang:1.23-alpine"
   "nginx:1.27-alpine"
+  "busybox:1.36"
 )
 
 export HTTP_PROXY="${PROXY}"
 export HTTPS_PROXY="${PROXY}"
 export http_proxy="${PROXY}"
 export https_proxy="${PROXY}"
-export NO_PROXY="${NO_PROXY:-localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.jianggan.cn,${HARBOR}}"
+export NO_PROXY="${NO_PROXY:-localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.jianggan.cn,${HARBOR},docker.m.daocloud.io,daocloud.io}"
 export no_proxy="${NO_PROXY}"
 
-hub_ref() {
+# docker.io 经代理不稳定时，busybox 等基础镜像改从 DaoCloud 国内源拉取
+src_ref() {
   local name_tag="$1"
   local name="${name_tag%%:*}"
   local tag="${name_tag##*:}"
-  printf 'docker.io/library/%s:%s' "${name}" "${tag}"
+  case "${name}" in
+    busybox)
+      printf 'docker.m.daocloud.io/library/%s:%s' "${name}" "${tag}"
+      ;;
+    *)
+      printf 'docker.io/library/%s:%s' "${name}" "${tag}"
+      ;;
+  esac
 }
 
 dest_ref() {
   local name_tag="$1"
   local name="${name_tag%%:*}"
   local tag="${name_tag##*:}"
-  printf 'docker://%s/%s/%s:%s' "${HARBOR}" "${PROJECT}" "${name}" "${tag}"
+  printf 'docker://%s/library/%s:%s' "${HARBOR}" "${name}" "${tag}"
 }
 
 skopeo_copy() {
@@ -68,7 +78,7 @@ crane_copy() {
 docker_copy() {
   local name_tag="$1"
   local dest="$2"
-  local harbor_image="${HARBOR}/${PROJECT}/${name_tag}"
+  local harbor_image="${HARBOR}/library/${name_tag}"
 
   if grep -q 'registry-mirrors' /etc/docker/daemon.json 2>/dev/null; then
     echo "WARN: /etc/docker/daemon.json has registry-mirrors (e.g. daocloud)."
@@ -109,17 +119,23 @@ fi
 
 if [[ -z "${PROXY}" ]]; then
   echo "ERROR: HTTP_PROXY not set. Run: source /etc/profile.d/proxy.sh" >&2
+  echo "       (or install /etc/profile.d/proxy.sh from scripts/harbor-server-profile-proxy.sh.example)" >&2
   exit 1
 fi
 
-echo "Harbor project: ${HARBOR}/${PROJECT}"
+if [[ "${TOOL}" == "docker" ]]; then
+  echo "WARN: using docker pull; skopeo avoids dockerd IPv6/registry-mirror issues." >&2
+  echo "      Recommended: apt install -y skopeo" >&2
+fi
+
+echo "Harbor registry: ${HARBOR}/library/"
 echo "Pull proxy: ${PROXY}"
 echo "Copy tool: ${TOOL}"
-echo "Ensure Harbor project '${PROJECT}' exists and docker/skopeo is logged in to ${HARBOR}."
+echo "Ensure Harbor project 'library' exists and docker/skopeo is logged in to ${HARBOR}."
 echo
 
 for name_tag in "${IMAGES[@]}"; do
-  src="$(hub_ref "${name_tag}")"
+  src="$(src_ref "${name_tag}")"
   dest="$(dest_ref "${name_tag}")"
   echo "== ${src} -> ${dest} =="
   case "${TOOL}" in
@@ -130,4 +146,4 @@ for name_tag in "${IMAGES[@]}"; do
   echo
 done
 
-echo "PASS: base images mirrored to ${HARBOR}/${PROJECT}/"
+echo "PASS: base images mirrored to ${HARBOR}/library/"

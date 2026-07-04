@@ -14,7 +14,8 @@ controller:
   # 修复 PVC 上 root 拥有的 casc_configs（k8s-sidecar 历史遗留）
   customInitContainers:
     - name: fix-jenkins-home-perms
-      image: busybox:1.36
+      # 集群无法拉 docker.io/library/busybox；使用 Harbor 内网镜像（仅替换域名，路径不变）
+      image: harbor-server.jianggan.cn/library/busybox:1.36
       command:
         - sh
         - -c
