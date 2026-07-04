@@ -76,7 +76,7 @@ controller:
     configScripts:
       proxy: |
         unclassified:
-          proxyConfiguration:
+          proxyConfigurationManager:
             name: "8.222.223.161"
             port: 32001
             userName: "vv-ai"

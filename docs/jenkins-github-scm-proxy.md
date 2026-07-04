@@ -36,6 +36,8 @@ GnuTLS, handshake failed: The TLS connection was non-properly terminated.
 
 ### 方式 A：Jenkins UI（推荐）
 
+Helm/JCasC 部署时，对应 YAML 键为 `unclassified.proxyConfigurationManager`（**Jenkins 2.547+**）。旧键 `proxyConfiguration` 会在启动时报 `UnknownAttributesException` 并导致 Pod CrashLoopBackOff；见 `docs/cluster-http-proxy-ansible-jenkins.md`。
+
 1. **Manage Jenkins → System → HTTP Proxy Configuration**
 2. 填写：
    - Server: `8.222.223.161`

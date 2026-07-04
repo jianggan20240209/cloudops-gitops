@@ -88,7 +88,7 @@ helm upgrade --install jenkins jenkins/jenkins \
 | 配置块 | 作用 |
 |--------|------|
 | `controller.containerEnv` | Jenkins 控制器 Pod 环境变量 |
-| `controller.JCasC.configScripts.proxy` | Jenkins UI HTTP Proxy（SCM 拉 Jenkinsfile） |
+| `controller.JCasC.configScripts.proxy` | Jenkins UI HTTP Proxy（SCM 拉 Jenkinsfile）；**Jenkins 2.547+** 使用 `proxyConfigurationManager`（旧版 `proxyConfiguration` 会导致 JCasC 启动失败） |
 | `controller.initScripts.git-proxy` | 控制器内 `git config --global http.proxy` |
 | `agent.envVars` | 静态 Agent 默认代理（Kaniko 仍以 Jenkinsfile podTemplate 为准） |
 
@@ -172,6 +172,54 @@ helm upgrade --install jenkins jenkins/jenkins \
 kubectl get cm jenkins -n devops -o jsonpath='{.data.apply_config\.sh}' | grep 'cp -f'
 kubectl -n devops delete pod jenkins-0
 ```
+
+### JCasC `UnknownAttributesException: proxyConfiguration`
+
+Jenkins **2.547+** 将 unclassified 下的 HTTP Proxy 键从 `proxyConfiguration` 重命名为 `proxyConfigurationManager`。旧键会导致控制器 CrashLoopBackOff，日志类似：
+
+```text
+UnknownAttributesException: unclassified: Invalid configuration elements ... proxyConfiguration.
+Available attributes: ... proxyConfigurationManager ...
+```
+
+**修复：** 在 `values-dev.yaml` 的 `controller.JCasC.configScripts.proxy` 中改用 `proxyConfigurationManager`（字段名不变：`name`、`port`、`userName`、`secretPassword`、`noProxyHost`、`testUrl`），同步 values 后 `helm upgrade` 并 `kubectl delete pod jenkins-0`。
+
+```yaml
+controller:
+  JCasC:
+    configScripts:
+      proxy: |
+        unclassified:
+          proxyConfigurationManager:
+            name: "8.222.223.161"
+            port: 32001
+            userName: "vv-ai"
+            secretPassword: "<password>"
+            noProxyHost: "localhost,127.0.0.1,..."
+            testUrl: "https://github.com"
+```
+
+### JCasC `Permission denied` on casc_configs
+
+init 已通过插件复制，但在写入 `/var/jenkins_home/casc_configs/*.yaml` 失败：
+
+```text
+cp: cannot create regular file '/var/jenkins_home/casc_configs/proxy.yaml': Permission denied
+```
+
+常见原因：PVC 上 `casc_configs` 曾被 **root**（历史 k8s-sidecar）创建，init 以 UID **1000** 运行无法写入。
+
+**一次性修复：**
+
+```bash
+kubectl run jenkins-chown -n devops --restart=Never --rm -i \
+  --image=busybox:1.36 \
+  --overrides='{"spec":{"containers":[{"name":"chown","image":"busybox:1.36","command":["sh","-c","chown -R 1000:1000 /var/jenkins_home && ls -ld /var/jenkins_home /var/jenkins_home/casc_configs"],"securityContext":{"runAsUser":0},"volumeMounts":[{"name":"home","mountPath":"/var/jenkins_home"}]}],"volumes":[{"name":"home","persistentVolumeClaim":{"claimName":"jenkins"}}]}}'
+
+kubectl -n devops delete pod jenkins-0
+```
+
+**持久修复：** values 中 `runAsUser`/`fsGroup: 1000` + `customInitContainers` 在 init 前 chown（见 `values-dev.yaml`）。
 
 ### k8s-sidecar ErrImagePull
 
