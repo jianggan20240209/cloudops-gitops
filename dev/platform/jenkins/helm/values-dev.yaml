@@ -6,6 +6,26 @@ controller:
 
   imagePullSecretName: harbor-pull-secret
 
+  # Jenkins 官方镜像 UID/GID；PVC 若曾被 root/sidecar 写入会导致 init Permission denied
+  runAsUser: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+
+  # 修复 PVC 上 root 拥有的 casc_configs（k8s-sidecar 历史遗留）
+  customInitContainers:
+    - name: fix-jenkins-home-perms
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - chown -R 1000:1000 /var/jenkins_home
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+
   serviceType: ClusterIP
   servicePort: 8080
 
