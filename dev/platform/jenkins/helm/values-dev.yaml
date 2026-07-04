@@ -83,7 +83,9 @@ controller:
         hosts:
           - jenkins.jianggan.cn
 
-  # init 重试时 plugin-dir EmptyDir 已有 .jpi，默认 cp 会交互询问导致 Exit 1
+  # init 重试时 plugin-dir EmptyDir 已有 .jpi；chart 仍用 `yes n | cp -i` 会 Exit 1。
+  # overwritePlugins 只清 PVC 的 jenkins_home/plugins，不清 /var/jenkins_plugins。
+  # helm upgrade 须加: --post-renderer scripts/jenkins-helm-post-render.sh
   overwritePlugins: true
 
   installPlugins:

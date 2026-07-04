@@ -79,7 +79,8 @@ cp ~/tools/cloudops-gitops/dev/platform/jenkins/helm/values-dev.yaml jenkins-val
 helm upgrade --install jenkins jenkins/jenkins \
   -n devops \
   --create-namespace \
-  -f jenkins-values.yaml
+  -f jenkins-values.yaml \
+  --post-renderer ~/tools/cloudops-gitops/scripts/jenkins-helm-post-render.sh
 ```
 
 ### values 中代理相关项
@@ -144,16 +145,33 @@ copy plugins to shared volume
 cp: overwrite '/var/jenkins_plugins/blueocean.jpi'?
 ```
 
-原因：init 重试时 `plugin-dir` EmptyDir 已有 `.jpi`，默认 `cp` 无 `-f` 在非 TTY 下等待确认 → Exit 1。
+原因：Helm chart 用 `yes n | cp -i` 复制到 EmptyDir `/var/jenkins_plugins`。init **在同一 Pod 内重试**时目标目录已有 `.jpi`，`yes n` 拒绝覆盖 → Exit 1。
 
-修复：在 values 中设置：
+`controller.overwritePlugins: true` **只**删除 PVC 上 `$JENKINS_HOME/plugins/*`，**不会**清空 `/var/jenkins_plugins`；`grep overwrite apply_config.sh` 也可能无匹配（脚本里只有 `rm -rf`，不含字面量 overwrite）。
 
-```yaml
-controller:
-  overwritePlugins: true
+**立即修复（一次性 patch ConfigMap）：**
+
+```bash
+kubectl get cm jenkins -n devops -o yaml \
+  | sed 's/yes n | cp -i/cp -f/g' \
+  | kubectl apply -f -
+
+kubectl -n devops delete pod jenkins-0
 ```
 
-然后 `helm upgrade` 并重建 Pod。
+**持久修复（helm post-renderer，gitops 已提供）：**
+
+```bash
+chmod +x ~/tools/cloudops-gitops/scripts/jenkins-helm-post-render.sh
+
+helm upgrade --install jenkins jenkins/jenkins \
+  -n devops \
+  -f /root/tools/jenkins/jenkins-values.yaml \
+  --post-renderer ~/tools/cloudops-gitops/scripts/jenkins-helm-post-render.sh
+
+kubectl get cm jenkins -n devops -o jsonpath='{.data.apply_config\.sh}' | grep 'cp -f'
+kubectl -n devops delete pod jenkins-0
+```
 
 ### k8s-sidecar ErrImagePull
 
