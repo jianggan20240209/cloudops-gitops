@@ -1,23 +1,26 @@
-# Jenkins Helm values — devops namespace
-# Chart: jenkins/jenkins  (https://github.com/jenkinsci/helm-charts)
-#
-# 安装/升级:
-#   helm repo add jenkins https://charts.jenkins.io
-#   helm upgrade --install jenkins jenkins/jenkins \
-#     -n devops --create-namespace \
-#     -f dev/platform/jenkins/helm/values-dev.yaml
-#
-# 代理说明:
-#   - controller.containerEnv / agent 环境变量: URL 编码密码 %2A
-#   - JCasC proxy.password: Jenkins UI 填明文 *
-#   - Kaniko Agent Pod 代理仍在 cloudops-platform Jenkinsfile podTemplate 中配置
-
 controller:
-  admin:
-    username: admin
-    # password: 使用 existingSecret 或 helm --set
+  image:
+    registry: harbor-server.jianggan.cn
+    repository: jenkins/jenkins
+    tag: "2.547-jdk25"
 
-  # Jenkins 控制器 Pod 环境变量（git/curl/plugin 出站）
+  imagePullSecretName: harbor-pull-secret
+
+  serviceType: ClusterIP
+  servicePort: 8080
+
+  # JVM 出站代理（明文 *；nonProxyHosts 含代理 IP 避免回环）
+  javaOpts: >-
+    -Dhttp.proxyHost=8.222.223.161
+    -Dhttp.proxyPort=32001
+    -Dhttp.proxyUser=vv-ai
+    -Dhttp.proxyPassword=w16y*3w2g862
+    -Dhttps.proxyHost=8.222.223.161
+    -Dhttps.proxyPort=32001
+    -Dhttps.proxyUser=vv-ai
+    -Dhttps.proxyPassword=w16y*3w2g862
+    -Dhttp.nonProxyHosts=localhost|127.*|192.168.*|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|*.svc|*.cluster.local|*.jianggan.cn|8.222.223.161
+
   containerEnv:
     - name: HTTP_PROXY
       value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
@@ -32,7 +35,7 @@ controller:
     - name: no_proxy
       value: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
 
-  # Jenkins UI → Manage Jenkins → System → HTTP Proxy（Configuration as Code）
+  # Jenkins UI HTTP Proxy（SCM 拉 Jenkinsfile）
   JCasC:
     defaultConfig: true
     configScripts:
@@ -48,46 +51,55 @@ controller:
             noProxyHost: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
             testUrl: "https://github.com"
 
-  # git 全局代理（控制器 Pod 内）可用 scripts/setup-jenkins-controller-git-proxy-k8s.sh 配置
-
   ingress:
     enabled: true
+    ingressClassName: nginx
     hostName: jenkins.jianggan.cn
+    annotations:
+      cert-manager.io/cluster-issuer: jianggan-ca-issuer
+      nginx.ingress.kubernetes.io/proxy-body-size: "1024m"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     tls:
-      - secretName: jenkins-tls
+      - secretName: jenkins-jianggan-cn-tls
         hosts:
           - jenkins.jianggan.cn
 
-  resources:
-    requests:
-      cpu: "500m"
-      memory: "1Gi"
-    limits:
-      cpu: "2000m"
-      memory: "2Gi"
-
-  # 与现有集群一致时可保留
   installPlugins:
-    - kubernetes:4306.vc91e9517_e93d
-    - workflow-aggregator:596.v8c21c963d92d
-    - git:5.5.2
-    - configuration-as-code:1932.v75cb_b_feb_86e3
+    - kubernetes
+    - workflow-aggregator
+    - git
+    - configuration-as-code
+    - credentials
+    - credentials-binding
+    - pipeline-stage-view
+    - blueocean
+    - job-dsl
+    - matrix-auth
+    - localization-support
+    - localization-zh-cn
+    - locale
+    - timestamper
+
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 50Gi
+  accessMode: ReadWriteOnce
 
 agent:
   enabled: true
-  # Kubernetes 动态 Agent 的默认环境（Kaniko Jenkinsfile podTemplate 会覆盖大部分场景）
+  imagePullSecretName: harbor-pull-secret
   envVars:
     - name: HTTP_PROXY
       value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
     - name: HTTPS_PROXY
       value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
+    - name: http_proxy
+      value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
+    - name: https_proxy
+      value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
     - name: NO_PROXY
-      value: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
-
-persistence:
-  enabled: true
-  size: 20Gi
-
-serviceAccount:
-  create: true
-  name: jenkins
+      value: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
+    - name: no_proxy
+      value: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"

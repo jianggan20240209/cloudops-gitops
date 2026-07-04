@@ -27,17 +27,12 @@ cloudops-gitops/ansible/
 ```bash
 cd ~/tools/cloudops-gitops/ansible
 
-# 1. 准备 inventory（填写所有 K8s 节点 / harbor-server）
+# 使用 pve-devops-k8s 集群 inventory（master + worker + harbor）
+ansible-playbook -i inventory/pve-devops-k8s.yml playbooks/cluster-http-proxy.yml
+
+# 或复制 hosts.example.yml 自定义
 cp inventory/hosts.example.yml inventory/hosts.yml
-vi inventory/hosts.yml
-
-# 2. 可选：修改 group_vars/all/proxy.yml 中的代理地址
-
-# 3. 批量执行
 ansible-playbook -i inventory/hosts.yml playbooks/cluster-http-proxy.yml
-
-# 仅 harbor-server
-ansible-playbook -i inventory/hosts.yml playbooks/cluster-http-proxy.yml -l harbor-server
 ```
 
 ### 每个节点会配置
@@ -71,14 +66,20 @@ curl -I -x "$HTTP_PROXY" --max-time 20 https://github.com
 
 ### 安装 / 升级
 
+与 harbor-server `~/tools/jenkins/jenkins-values.yaml` 对齐的 values 见：
+
+`dev/platform/jenkins/helm/values-dev.yaml`
+
 ```bash
-helm repo add jenkins https://charts.jenkins.io
-helm repo update
+cd ~/tools/jenkins
+
+# 可从 gitops 同步最新 values
+cp ~/tools/cloudops-gitops/dev/platform/jenkins/helm/values-dev.yaml jenkins-values.yaml
 
 helm upgrade --install jenkins jenkins/jenkins \
   -n devops \
   --create-namespace \
-  -f dev/platform/jenkins/helm/values-dev.yaml
+  -f jenkins-values.yaml
 ```
 
 ### values 中代理相关项

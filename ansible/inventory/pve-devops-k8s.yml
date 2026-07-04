@@ -1,0 +1,34 @@
+---
+# kubeasz pve-devops-k8s 集群 inventory（与 /etc/kubeasz/clusters/pve-devops-k8s/hosts 对应）
+
+all:
+  children:
+    k8s_cluster:
+      children:
+        kube_master:
+          hosts:
+            k8s-cluster-master-01:
+              ansible_host: 192.168.1.101
+            k8s-cluster-master-02:
+              ansible_host: 192.168.1.102
+            k8s-cluster-master-03:
+              ansible_host: 192.168.1.103
+        kube_node:
+          hosts:
+            k8s-storage-node-01:
+              ansible_host: 192.168.1.111
+            k8s-storage-node-02:
+              ansible_host: 192.168.1.112
+            k8s-storage-node-03:
+              ansible_host: 192.168.1.113
+            k8s-compute-node-04:
+              ansible_host: 192.168.1.114
+            k8s-compute-node-05:
+              ansible_host: 192.168.1.115
+        harbor:
+          hosts:
+            harbor-server:
+              ansible_host: 192.168.1.200
+      vars:
+        ansible_user: root
+        ansible_python_interpreter: /usr/bin/python3
