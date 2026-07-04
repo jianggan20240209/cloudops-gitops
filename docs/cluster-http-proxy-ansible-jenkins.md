@@ -125,7 +125,50 @@ JENKINS_NS=devops bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
 
 ---
 
-## 4. 安全
+## 4. Init 容器 `Init:Error` 排障
+
+### 插件下载失败（无代理）
+
+`kubectl -n devops logs jenkins-0 -c init` 出现 `Failed to download plugin` / `Connection refused`：
+
+- 确认 `controller.initContainerEnv` 与 `containerEnv` 使用相同 `HTTP_PROXY` / `NO_PROXY`
+- 同步 `values-dev.yaml` 后 `helm upgrade` 并 `kubectl delete pod jenkins-0`
+
+### 插件已下载但 `cp: overwrite` 交互失败
+
+日志末尾类似：
+
+```text
+Done
+copy plugins to shared volume
+cp: overwrite '/var/jenkins_plugins/blueocean.jpi'?
+```
+
+原因：init 重试时 `plugin-dir` EmptyDir 已有 `.jpi`，默认 `cp` 无 `-f` 在非 TTY 下等待确认 → Exit 1。
+
+修复：在 values 中设置：
+
+```yaml
+controller:
+  overwritePlugins: true
+```
+
+然后 `helm upgrade` 并重建 Pod。
+
+### k8s-sidecar ErrImagePull
+
+禁用 JCasC sidecar（集群无法拉 `docker.io/kiwigrid/k8s-sidecar`）：
+
+```yaml
+controller:
+  sidecars:
+    configAutoReload:
+      enabled: false
+```
+
+---
+
+## 5. 安全
 
 - 生产环境建议 `ansible-vault encrypt group_vars/all/proxy.yml`
 - 勿将明文密码提交到公开仓库

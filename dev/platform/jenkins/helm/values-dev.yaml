@@ -83,6 +83,9 @@ controller:
         hosts:
           - jenkins.jianggan.cn
 
+  # init 重试时 plugin-dir EmptyDir 已有 .jpi，默认 cp 会交互询问导致 Exit 1
+  overwritePlugins: true
+
   installPlugins:
     - kubernetes
     - workflow-aggregator
