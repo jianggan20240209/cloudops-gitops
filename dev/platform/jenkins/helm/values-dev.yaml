@@ -49,6 +49,11 @@ controller:
             noProxyHost: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
             testUrl: "https://github.com"
 
+  # JCasC sidecar 默认拉 docker.io/kiwigrid/k8s-sidecar，集群无法访问 Docker Hub 时禁用
+  sidecars:
+    configAutoReload:
+      enabled: false
+
   ingress:
     enabled: true
     ingressClassName: nginx
