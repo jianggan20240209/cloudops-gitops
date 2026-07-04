@@ -40,8 +40,6 @@ controller:
     defaultConfig: true
     configScripts:
       proxy: |
-        jenkins:
-          numExecutors: 0
         unclassified:
           proxyConfiguration:
             name: "8.222.223.161"
