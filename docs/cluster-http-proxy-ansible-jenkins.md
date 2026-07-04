@@ -88,7 +88,7 @@ helm upgrade --install jenkins jenkins/jenkins \
 | 配置块 | 作用 |
 |--------|------|
 | `controller.containerEnv` | Jenkins 控制器 Pod 环境变量 |
-| `controller.JCasC.configScripts.proxy` | Jenkins UI HTTP Proxy（SCM 拉 Jenkinsfile）；**Jenkins 2.547+** 使用 `proxyConfigurationManager`（旧版 `proxyConfiguration` 会导致 JCasC 启动失败） |
+| `controller.JCasC.configScripts.proxy` | Jenkins UI HTTP Proxy（SCM 拉 Jenkinsfile）；**Jenkins 2.547+** 使用 `jenkins.proxy`（勿把 `name/port` 写在 `unclassified.proxyConfigurationManager` 下） |
 | `controller.initScripts.git-proxy` | 控制器内 `git config --global http.proxy` |
 | `agent.envVars` | 静态 Agent 默认代理（Kaniko 仍以 Jenkinsfile podTemplate 为准） |
 
@@ -173,24 +173,17 @@ kubectl get cm jenkins -n devops -o jsonpath='{.data.apply_config\.sh}' | grep '
 kubectl -n devops delete pod jenkins-0
 ```
 
-### JCasC `UnknownAttributesException: proxyConfiguration`
+### JCasC HTTP Proxy（Jenkins 2.547+）
 
-Jenkins **2.547+** 将 unclassified 下的 HTTP Proxy 键从 `proxyConfiguration` 重命名为 `proxyConfigurationManager`。旧键会导致控制器 CrashLoopBackOff，日志类似：
-
-```text
-UnknownAttributesException: unclassified: Invalid configuration elements ... proxyConfiguration.
-Available attributes: ... proxyConfigurationManager ...
-```
-
-**修复：** 在 `values-dev.yaml` 的 `controller.JCasC.configScripts.proxy` 中改用 `proxyConfigurationManager`（字段名不变：`name`、`port`、`userName`、`secretPassword`、`noProxyHost`、`testUrl`），同步 values 后 `helm upgrade` 并 `kubectl delete pod jenkins-0`。
+**正确写法**（字段在 `jenkins.proxy` 下）：
 
 ```yaml
 controller:
   JCasC:
     configScripts:
       proxy: |
-        unclassified:
-          proxyConfigurationManager:
+        jenkins:
+          proxy:
             name: "8.222.223.161"
             port: 32001
             userName: "vv-ai"
@@ -198,6 +191,20 @@ controller:
             noProxyHost: "localhost,127.0.0.1,..."
             testUrl: "https://github.com"
 ```
+
+**常见错误 1：** `unclassified.proxyConfiguration`（2.547 已移除）→ 日志 `Available attributes: ... proxyConfigurationManager ...`
+
+**常见错误 2：** 把 `name/port/...` 写在 `unclassified.proxyConfigurationManager` 下 → 日志：
+
+```text
+UnknownAttributesException: proxyConfigurationManager: Invalid configuration elements for type: class hudson.ProxyConfigurationManager : name,port,...
+```
+
+`ProxyConfigurationManager` 是 GlobalConfiguration 壳，**不接受**这些字段；代理配置应放在 **`jenkins.proxy`**。
+
+修复后 `helm upgrade` 并 `kubectl delete pod jenkins-0`。
+
+### JCasC `UnknownAttributesException: proxyConfiguration`（历史）
 
 ### JCasC `Permission denied` on casc_configs
 
