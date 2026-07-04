@@ -1,0 +1,19 @@
+---
+# 批量配置集群节点系统级 HTTP/HTTPS 代理
+#
+# 用法:
+#   cd ansible
+#   cp inventory/hosts.example.yml inventory/hosts.yml   # 编辑节点 IP
+#   ansible-playbook -i inventory/hosts.yml playbooks/cluster-http-proxy.yml
+#
+# 仅对部分节点:
+#   ansible-playbook -i inventory/hosts.yml playbooks/cluster-http-proxy.yml -l harbor-server
+#
+# 修改代理地址: 编辑 group_vars/all/proxy.yml
+
+- name: Configure cluster HTTP/HTTPS proxy
+  hosts: k8s_cluster
+  become: true
+  gather_facts: true
+  roles:
+    - role: cluster-http-proxy

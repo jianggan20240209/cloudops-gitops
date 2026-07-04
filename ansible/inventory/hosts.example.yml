@@ -1,0 +1,16 @@
+---
+# 复制为 hosts.yml 并填写节点 IP
+# cp inventory/hosts.example.yml inventory/hosts.yml
+
+all:
+  children:
+    k8s_cluster:
+      hosts:
+        harbor-server:
+          ansible_host: 192.168.1.200
+          ansible_user: root
+        # k8s-node-1:
+        #   ansible_host: 192.168.1.201
+        #   ansible_user: root
+      vars:
+        ansible_python_interpreter: /usr/bin/python3

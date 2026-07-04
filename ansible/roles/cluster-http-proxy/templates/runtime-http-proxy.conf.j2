@@ -1,0 +1,7 @@
+# Managed by Ansible — dockerd / containerd HTTP proxy
+# systemd: use plain * in password, not %2A
+
+[Service]
+Environment="HTTP_PROXY={{ http_proxy_url_systemd }}"
+Environment="HTTPS_PROXY={{ https_proxy_url_systemd }}"
+Environment="NO_PROXY={{ no_proxy_list }}"

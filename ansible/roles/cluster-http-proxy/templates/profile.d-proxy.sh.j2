@@ -1,0 +1,9 @@
+# Managed by Ansible — cluster system HTTP/HTTPS proxy
+# shell / git / curl / skopeo: password * encoded as %2A in URL
+
+export HTTP_PROXY="{{ http_proxy_url }}"
+export HTTPS_PROXY="{{ https_proxy_url }}"
+export http_proxy="{{ http_proxy_url }}"
+export https_proxy="{{ https_proxy_url }}"
+export NO_PROXY="{{ no_proxy_list }}"
+export no_proxy="{{ no_proxy_list }}"

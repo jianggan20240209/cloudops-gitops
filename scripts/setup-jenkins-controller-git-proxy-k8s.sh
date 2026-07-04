@@ -2,7 +2,7 @@
 # Run Jenkins controller git proxy setup inside the Jenkins pod via kubectl.
 set -euo pipefail
 
-GIT_PROXY="${GIT_PROXY:-http://192.168.1.50:7890}"
+GIT_PROXY="${GIT_PROXY:-http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001}"
 REPO_URL="${REPO_URL:-https://github.com/jianggan20240209/cloudops-platform.git}"
 JENKINS_NS="${JENKINS_NS:-}"
 JENKINS_POD="${JENKINS_POD:-}"
@@ -77,4 +77,4 @@ EOF
 
 echo
 echo "PASS: Jenkins controller git proxy configured in pod ${NS}/${POD}"
-echo "Next: Manage Jenkins -> System -> HTTP Proxy = 192.168.1.50:7890, then retry test-cloudops-cicd-kaniko"
+echo "Next: Manage Jenkins -> System -> HTTP Proxy = 8.222.223.161:32001, then retry test-cloudops-cicd-kaniko"

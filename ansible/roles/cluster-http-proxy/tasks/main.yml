@@ -1,0 +1,84 @@
+---
+- name: Deploy /etc/profile.d/proxy.sh
+  ansible.builtin.template:
+    src: profile.d-proxy.sh.j2
+    dest: /etc/profile.d/proxy.sh
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Remove legacy docker proxy drop-in proxy.conf
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/docker.service.d/proxy.conf
+    - /etc/systemd/system/containerd.service.d/proxy.conf
+  when: configure_container_runtime_proxy | bool
+
+- name: Ensure docker systemd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: configure_container_runtime_proxy | bool
+
+- name: Deploy docker http-proxy.conf
+  ansible.builtin.template:
+    src: runtime-http-proxy.conf.j2
+    dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: configure_container_runtime_proxy | bool
+
+- name: Ensure containerd systemd drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/containerd.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: configure_container_runtime_proxy | bool
+
+- name: Deploy containerd http-proxy.conf
+  ansible.builtin.template:
+    src: runtime-http-proxy.conf.j2
+    dest: /etc/systemd/system/containerd.service.d/http-proxy.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: configure_container_runtime_proxy | bool
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: configure_container_runtime_proxy | bool and restart_container_runtime | bool
+
+- name: Restart containerd
+  ansible.builtin.systemd:
+    name: containerd
+    state: restarted
+  when: configure_container_runtime_proxy | bool and restart_container_runtime | bool
+  failed_when: false
+
+- name: Restart docker
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
+  when: configure_container_runtime_proxy | bool and restart_container_runtime | bool
+  failed_when: false
+
+- name: Show docker Environment (if docker installed)
+  ansible.builtin.command: systemctl show docker --property=Environment --no-pager
+  register: docker_env
+  changed_when: false
+  failed_when: false
+  when: configure_container_runtime_proxy | bool
+
+- name: Print docker proxy env
+  ansible.builtin.debug:
+    var: docker_env.stdout
+  when: configure_container_runtime_proxy | bool and docker_env.stdout is defined
