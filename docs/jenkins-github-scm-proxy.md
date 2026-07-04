@@ -16,16 +16,36 @@ GnuTLS, handshake failed: The TLS connection was non-properly terminated.
 
 ## 1. 在 Jenkins 控制器配置 Git 代理
 
+### 代理地址与密码转义
+
+外网 tinyproxy（DNAT `8.222.223.161:32001` → 代理机 `8888`）：
+
+| 项 | 值 |
+|---|---|
+| 明文密码 | `w16y*3w2g862` |
+| URL 中 `*` | 写成 **`%2A`** |
+| 完整代理 URL | `http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001` |
+
+**不同场景写法：**
+
+| 场景 | 密码写法 |
+|------|----------|
+| git / curl / shell `HTTP_PROXY` | `%2A`（URL 编码） |
+| Jenkins UI「HTTP Proxy」密码框 | 明文 `*` |
+| systemd `docker.service.d` | 明文 `*`（`%2A` 会导致 HTTP_PROXY 加载失败） |
+
 ### 方式 A：Jenkins UI（推荐）
 
 1. **Manage Jenkins → System → HTTP Proxy Configuration**
 2. 填写：
-   - Server: `192.168.1.50`
-   - Port: `7890`
+   - Server: `8.222.223.161`
+   - Port: `32001`
+   - Username: `vv-ai`
+   - Password: `w16y*3w2g862`（UI 填明文，不要填 `%2A`）
 3. **No Proxy Host** 建议包含：
 
 ```text
-localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn
+localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,docker.m.daocloud.io,daocloud.io
 ```
 
 4. 保存后重试 `test-cloudops-cicd-kaniko`
@@ -36,11 +56,10 @@ localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.lo
 
 ```bash
 # 若 Jenkins 跑在容器内，先进入控制器 Pod
-# kubectl -n <jenkins-namespace> exec -it deploy/jenkins -- bash
+# kubectl -n devops exec -it deploy/jenkins -- bash
 
-export GIT_PROXY=http://192.168.1.50:7890
-git config --global http.proxy "${GIT_PROXY}"
-git config --global https.proxy "${GIT_PROXY}"
+git config --global http.proxy  'http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001'
+git config --global https.proxy 'http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001'
 git config --global http.version HTTP/1.1
 git config --global http.lowSpeedLimit 0
 git config --global http.lowSpeedTime 999999
@@ -51,28 +70,30 @@ git ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD
 
 Jenkins Home 通常在 `/var/jenkins_home`，gitconfig 写入 `/var/jenkins_home/.gitconfig`。
 
-仓库内提供辅助脚本：
+仓库内提供辅助脚本（可传入 `GIT_PROXY`）：
 
 ```bash
-# 在 harbor-server 上通过 kubectl 进入 Jenkins 控制器 Pod 配置
+export GIT_PROXY='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001'
 bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
-
-# 若已知 Jenkins Pod
-JENKINS_NS=jenkins JENKINS_POD=jenkins-0 bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
 ```
 
 不要在本机 harbor-server 直接执行 `JENKINS_HOME=/var/jenkins_home bash scripts/setup-jenkins-controller-git-proxy.sh`，除非当前 shell 就在 Jenkins 控制器内。
 
 ## 2. 验证代理可达
 
-在 Jenkins 控制器上：
+在 Jenkins 控制器或 harbor-server 上：
 
 ```bash
-curl -x http://192.168.1.50:7890 -I https://github.com
-curl -x http://192.168.1.50:7890 -I https://github.com/jianggan20240209/cloudops-platform.git
+# curl 使用 URL 编码密码 %2A
+curl -I -x 'http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' --max-time 20 https://github.com
+
+# git 一次性指定代理（同样用 %2A）
+git -c http.proxy='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' \
+    -c https.proxy='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' \
+    ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD
 ```
 
-若这里失败，先修复 Jenkins → `192.168.1.50:7890` 网络，而不是改 Jenkinsfile。
+若这里失败，先修复到 `8.222.223.161:32001` 的网络/认证，而不是改 Jenkinsfile。
 
 ## 3. Jenkinsfile 内代理（Pipeline 阶段）
 
