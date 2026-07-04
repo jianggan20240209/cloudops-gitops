@@ -1200,6 +1200,10 @@ cloudops-web / 返回前端 HTML 页面
    现象: Environment=NO_PROXY=... 一行，看不到 HTTP_PROXY/HTTPS_PROXY。
    原因: systemd unit 中 % 是转义符；密码 URL 编码 %2A 写成 %2A 会导致 HTTP_PROXY 行解析失败。
    修复: http-proxy.conf 中密码改用明文 *（w16y*3w2g862），或 % 写成 %%（w16y%%2A3w2g862）；同步到 containerd.service.d 后 daemon-reload && restart。
+
+13. Kaniko 使用国内 golang 基础镜像（避免 docker.io / Harbor base 同步）。
+   配置: Jenkinsfile 环境变量 GO_BUILD_IMAGE=docker.m.daocloud.io/library/golang:1.23-alpine，--build-arg 传入 Dockerfile。
+   cloudops-cicd 另设 GOPROXY=https://goproxy.cn,direct；NO_PROXY 增加 docker.m.daocloud.io,daocloud.io 直连国内镜像站。
 ```
 
 ## 10. 后续优化
