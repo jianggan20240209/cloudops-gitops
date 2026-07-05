@@ -42,7 +42,7 @@ src_ref() {
       printf 'docker.m.daocloud.io/library/%s:%s' "${name}" "${tag}"
       ;;
     kubectl)
-      # bitnami/kubectl -> harbor library/kubectl (harbor-pull-secret covers library)
+      # bitnami/kubectl -> harbor kaniko/kubectl (harbor-pull-secret already pulls kaniko/executor)
       printf 'docker.io/bitnami/kubectl:%s' "${tag}"
       ;;
     */*)
@@ -58,11 +58,45 @@ dest_ref() {
   local name_tag="$1"
   local name="${name_tag%%:*}"
   local tag="${name_tag##*:}"
-  if [[ "${name}" == */* ]]; then
-    printf 'docker://%s/%s:%s' "${HARBOR}" "${name}" "${tag}"
-  else
-    printf 'docker://%s/library/%s:%s' "${HARBOR}" "${name}" "${tag}"
+  case "${name}" in
+    kubectl)
+      printf 'docker://%s/kaniko/kubectl:%s' "${HARBOR}" "${tag}"
+      ;;
+    */*)
+      printf 'docker://%s/%s:%s' "${HARBOR}" "${name}" "${tag}"
+      ;;
+    *)
+      printf 'docker://%s/library/%s:%s' "${HARBOR}" "${name}" "${tag}"
+      ;;
+  esac
+}
+
+require_harbor_login() {
+  if [[ ! -f "${AUTH_FILE}" ]]; then
+    echo "ERROR: ${AUTH_FILE} missing. Run: docker login ${HARBOR}" >&2
+    exit 1
   fi
+  if ! grep -q "${HARBOR}" "${AUTH_FILE}" 2>/dev/null; then
+    echo "ERROR: not logged in to ${HARBOR}. Run: docker login ${HARBOR}" >&2
+    exit 1
+  fi
+}
+
+verify_dest() {
+  local dest="$1"
+  [[ "${TOOL}" == "skopeo" ]] || return 0
+  local -a args=(inspect "${dest}")
+  if [[ -f "${AUTH_FILE}" ]]; then
+    args+=(--authfile "${AUTH_FILE}")
+  fi
+  if [[ -d "${DEST_CERT_DIR}" ]]; then
+    args+=(--cert-dir "${DEST_CERT_DIR}")
+  fi
+  if ! skopeo "${args[@]}" >/dev/null; then
+    echo "ERROR: ${dest} not pullable after copy. Run: docker login ${HARBOR}" >&2
+    exit 1
+  fi
+  echo "VERIFY: ${dest} exists"
 }
 
 skopeo_copy() {
@@ -109,12 +143,19 @@ docker_copy() {
   local src
   src="$(src_ref "${name_tag}")"
   local name="${name_tag%%:*}"
+  local tag="${name_tag##*:}"
   local harbor_image
-  if [[ "${name}" == */* ]]; then
-    harbor_image="${HARBOR}/${name_tag}"
-  else
-    harbor_image="${HARBOR}/library/${name_tag}"
-  fi
+  case "${name}" in
+    kubectl)
+      harbor_image="${HARBOR}/kaniko/kubectl:${tag}"
+      ;;
+    */*)
+      harbor_image="${HARBOR}/${name_tag}"
+      ;;
+    *)
+      harbor_image="${HARBOR}/library/${name_tag}"
+      ;;
+  esac
 
   if grep -q 'registry-mirrors' /etc/docker/daemon.json 2>/dev/null; then
     echo "WARN: /etc/docker/daemon.json has registry-mirrors (e.g. daocloud)."
@@ -170,7 +211,8 @@ echo "Copy tool: ${TOOL}"
 if [[ -n "${ONLY_IMAGES}" ]]; then
   echo "ONLY_IMAGES: ${ONLY_IMAGES}"
 fi
-echo "Ensure Harbor project 'library' exists and skopeo/docker is logged in to ${HARBOR}."
+echo "Ensure Harbor projects 'library' and 'kaniko' exist and docker/skopeo is logged in to ${HARBOR}."
+require_harbor_login
 echo
 
 for name_tag in "${IMAGES[@]}"; do
@@ -185,6 +227,7 @@ for name_tag in "${IMAGES[@]}"; do
     crane) crane_copy "${src}" "${dest#docker://}" ;;
     docker) docker_copy "${name_tag}" "${dest}" ;;
   esac
+  verify_dest "${dest}"
   echo
 done
 

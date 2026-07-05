@@ -320,7 +320,7 @@ Pod 配置要点：
 
 ```text
 spec.serviceAccountName: jenkins-kaniko-agent
-sidecar 镜像: harbor-server.jianggan.cn/library/kubectl:1.30.4
+sidecar 镜像: harbor-server.jianggan.cn/kaniko/kubectl:1.30.4
 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
 ```
 
@@ -1254,9 +1254,9 @@ cloudops-web / 返回前端 HTML 页面
    原因: ApplicationService Patch 触发 repo-server 对 GitHub 执行 ls-remote，repo-server 无法访问 GitHub（EOF），即使仅更新 helm parameters 也拒绝 PATCH。
    修复:
      1) Jenkinsfile 改用 kubectl patch Application CR（与 build-cloudops-cicd-manual.sh 一致），不再依赖 Argo CD REST API 更新 imageTag / 触发 sync / 轮询状态。
-     2) Kaniko Pod 增加 kubectl sidecar（harbor-server.jianggan.cn/library/kubectl:1.30.4）与 serviceAccountName: jenkins-kaniko-agent。
+     2) Kaniko Pod 增加 kubectl sidecar（harbor-server.jianggan.cn/kaniko/kubectl:1.30.4）与 serviceAccountName: jenkins-kaniko-agent。
      3) 新增 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml（集群管理员 kubectl apply -f ...）。
-     4) mirror-harbor-base-images.sh 将 docker.io/bitnami/kubectl:1.30.4 同步到 Harbor library/kubectl:1.30.4（与 harbor-pull-secret 授权一致）。
+     4) mirror-harbor-base-images.sh 将 docker.io/bitnami/kubectl:1.30.4 同步到 Harbor kaniko/kubectl:1.30.4（与 kaniko/executor 同项目，harbor-pull-secret 已授权）。
      5) Report Release Record 阶段仍保留 curl + argocd-auth-token。
    部署前检查（须先 git pull，本地 clone 过旧会报 path does not exist）:
      cd ~/tools/cloudops-gitops && git pull origin main

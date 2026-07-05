@@ -33,7 +33,24 @@ if ! command -v skopeo >/dev/null 2>&1; then
   echo "Installing skopeo (recommended over docker pull via proxy)..."
   apt-get update -qq && apt-get install -y skopeo
 fi
-ONLY_IMAGES="${KUBECTL_IMAGE}" PULL_TOOL=skopeo bash "${ROOT}/scripts/mirror-harbor-base-images.sh"
+if ! grep -q "${HARBOR:-harbor-server.jianggan.cn}" "${DOCKER_CONFIG:-$HOME/.docker}/config.json" 2>/dev/null; then
+  echo "ERROR: docker not logged in to Harbor. Run: docker login harbor-server.jianggan.cn" >&2
+  exit 1
+fi
+HARBOR="${HARBOR:-harbor-server.jianggan.cn}"
+BITNAMI_REF="docker://${HARBOR}/bitnami/kubectl:${KUBECTL_IMAGE##*:}"
+KANIKO_REF="docker://${HARBOR}/kaniko/kubectl:${KUBECTL_IMAGE##*:}"
+if skopeo inspect "${KANIKO_REF}" --authfile "${DOCKER_CONFIG:-$HOME/.docker}/config.json" >/dev/null 2>&1; then
+  echo "SKIP: ${KANIKO_REF} already exists"
+elif skopeo inspect "${BITNAMI_REF}" --authfile "${DOCKER_CONFIG:-$HOME/.docker}/config.json" >/dev/null 2>&1; then
+  echo "Retag existing ${BITNAMI_REF} -> ${KANIKO_REF}"
+  skopeo copy "${BITNAMI_REF}" "${KANIKO_REF}" \
+    --src-authfile "${DOCKER_CONFIG:-$HOME/.docker}/config.json" \
+    --dest-authfile "${DOCKER_CONFIG:-$HOME/.docker}/config.json"
+  skopeo inspect "${KANIKO_REF}" --authfile "${DOCKER_CONFIG:-$HOME/.docker}/config.json" >/dev/null
+else
+  ONLY_IMAGES="${KUBECTL_IMAGE}" PULL_TOOL=skopeo bash "${ROOT}/scripts/mirror-harbor-base-images.sh"
+fi
 
 echo
 echo "PASS: RBAC applied and ${KUBECTL_IMAGE} mirrored."
