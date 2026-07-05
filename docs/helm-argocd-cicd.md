@@ -1283,6 +1283,11 @@ cloudops-web / 返回前端 HTML 页面
 22. kaniko/kubectl not found 持续（build #40）。
    现象: Harbor 中 kaniko/kubectl 始终不存在，Pod ErrImagePull。
    修复: 移除 kubectl sidecar；Prepare kubectl 阶段在 jnlp 容器从 dl.k8s.io 下载二进制到 workspace/bin，仍用 serviceAccount jenkins-kaniko-agent 执行 patch/sync/wait。Harbor 镜像同步变为可选。
+
+23. kubectl patch JSON 引号丢失（build #41）。
+   现象: kubectl patch -p 报 invalid character 's'；日志中 JSON 键无引号。
+   原因: sh 块内 -p "{\"spec\":...}" 转义在 Jenkins 执行时被剥离。
+   修复: writeFile + JsonOutput 生成 patch JSON，kubectl --patch-file；curl 下载 kubectl 时加 -x HTTP_PROXY。
 ```
 
 ## 10. 后续优化
