@@ -20,6 +20,7 @@ IMAGES=(
   "golang:1.23-alpine"
   "nginx:1.27-alpine"
   "busybox:1.36"
+  "bitnami/kubectl:1.30.4"
 )
 
 export HTTP_PROXY="${PROXY}"
@@ -38,6 +39,9 @@ src_ref() {
     busybox)
       printf 'docker.m.daocloud.io/library/%s:%s' "${name}" "${tag}"
       ;;
+    */*)
+      printf 'docker.io/%s:%s' "${name}" "${tag}"
+      ;;
     *)
       printf 'docker.io/library/%s:%s' "${name}" "${tag}"
       ;;
@@ -48,7 +52,11 @@ dest_ref() {
   local name_tag="$1"
   local name="${name_tag%%:*}"
   local tag="${name_tag##*:}"
-  printf 'docker://%s/library/%s:%s' "${HARBOR}" "${name}" "${tag}"
+  if [[ "${name}" == */* ]]; then
+    printf 'docker://%s/%s:%s' "${HARBOR}" "${name}" "${tag}"
+  else
+    printf 'docker://%s/library/%s:%s' "${HARBOR}" "${name}" "${tag}"
+  fi
 }
 
 skopeo_copy() {
@@ -78,7 +86,13 @@ crane_copy() {
 docker_copy() {
   local name_tag="$1"
   local dest="$2"
-  local harbor_image="${HARBOR}/library/${name_tag}"
+  local name="${name_tag%%:*}"
+  local harbor_image
+  if [[ "${name}" == */* ]]; then
+    harbor_image="${HARBOR}/${name_tag}"
+  else
+    harbor_image="${HARBOR}/library/${name_tag}"
+  fi
 
   if grep -q 'registry-mirrors' /etc/docker/daemon.json 2>/dev/null; then
     echo "WARN: /etc/docker/daemon.json has registry-mirrors (e.g. daocloud)."

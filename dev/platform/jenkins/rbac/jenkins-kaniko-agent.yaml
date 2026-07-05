@@ -1,0 +1,38 @@
+# RBAC for Jenkins Kaniko agent pods to patch Argo CD Applications via kubectl.
+# Apply once per cluster (cluster admin):
+#   kubectl apply -f dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins-kaniko-agent
+  namespace: devops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-kaniko-argocd
+  namespace: argocd
+rules:
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - applications
+    verbs:
+      - get
+      - patch
+      - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-kaniko-argocd
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: jenkins-kaniko-argocd
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-kaniko-agent
+    namespace: devops
