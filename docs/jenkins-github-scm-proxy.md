@@ -99,22 +99,23 @@ git -c http.proxy='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' \
 
 ## 3. Agent Pod 内 Checkout（Pipeline 阶段）
 
-`cloudops-platform` 三个 Kaniko Jenkinsfile 在 **Checkout** 阶段通过 `GitConfigOption` 为 Git 插件注入：
+`cloudops-platform` 三个 Kaniko Jenkinsfile 在 `environment` 中设置 Git 2.35+ 的 **`GIT_CONFIG_*`** 变量，对 Git 插件调用的 `git fetch` 生效：
 
 ```text
-http.version = HTTP/1.1
-http.proxy / https.proxy = http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001
+GIT_CONFIG_KEY_0 / GIT_CONFIG_VALUE_0 = http.version / HTTP/1.1
+GIT_CONFIG_KEY_1 / GIT_CONFIG_VALUE_1 = http.proxy  / http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001
+GIT_CONFIG_KEY_2 / GIT_CONFIG_VALUE_2 = https.proxy / (同上)
 ```
 
-日志里 `Prepare Git` 的 `http.proxy=` 可能被 Jenkins **脱敏**为空，不代表未设置；但 **`git` 简写步骤不会带上 `http.version`**，经 Jenkins UI 代理拉 GitHub 时易出现 GnuTLS recv error (-110)。
-
-**修复：** Checkout 改用 `checkout([$class: 'GitSCM', extensions: [[$class: 'GitConfigOption', ...]]])`（见 `Jenkinsfile.*-kaniko`）。
+勿使用 `GitConfigOption`（当前集群 Git 插件无此 extension）。`Prepare Git` 日志里 `http.proxy=` 可能被 Jenkins **脱敏**为空，不代表未设置。
 
 在 Agent Pod 内验证（替换 Pod 名）：
 
 ```bash
 kubectl -n devops exec -it <agent-pod> -c jnlp -- sh -c \
-  "git -c http.version=HTTP/1.1 -c http.proxy='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD"
+  "export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=http.version GIT_CONFIG_VALUE_0=HTTP/1.1 \
+   GIT_CONFIG_KEY_1=http.proxy GIT_CONFIG_VALUE_1='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' && \
+   git ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD"
 ```
 
 ## 4. 临时绕过（不依赖 Jenkins）
