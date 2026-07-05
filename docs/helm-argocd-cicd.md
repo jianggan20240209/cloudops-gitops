@@ -317,12 +317,16 @@ curl 必须加 -f，确保 Argo CD API 返回非 2xx 时流水线失败。
 推荐 Jenkins 侧实现（`cloudops-platform` 三个 Kaniko Jenkinsfile 已采用）：
 
 ```bash
-PATCH_BODY='{"patch":"{\"spec\":{\"source\":{\"helm\":{\"parameters\":[{\"name\":\"app.imageTag\",\"value\":\"'"${IMAGE_TAG}"'\",\"forceString\":true}]}}}}","patchType":"merge"}'
+cat > /tmp/argocd-patch-request.json <<PATCH_EOF
+{"patch":"{\\"spec\\":{\\"source\\":{\\"helm\\":{\\"parameters\\":[{\\"name\\":\\"app.imageTag\\",\\"value\\":\\"${IMAGE_TAG}\\",\\"forceString\\":true}]}}}}","patchType":"merge"}
+PATCH_EOF
 curl -fksS -X PATCH "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
   -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}" \
   -H "Content-Type: application/json" \
-  --data "${PATCH_BODY}"
+  --data @/tmp/argocd-patch-request.json
 ```
+
+说明: Jenkins `sh '''` 中单写 `\"` 会被 Groovy 吞掉反斜杠，导致 patch 字段 JSON 无效（build #33）。heredoc 内用 `\\"` 写入文件后再 `--data @file`。
 
 备选：`PUT /api/v1/applications/<app>/spec` 只提交 ApplicationSpec；若用 `PUT /api/v1/applications/<app>` 则 body 须含 `apiVersion`/`kind`，且不能带 GET 返回的 `metadata.managedFields`。
 
@@ -1231,6 +1235,11 @@ cloudops-web / 返回前端 HTML 页面
    现象: status 已正确剥离、spec 中 imageTag 已改为 main-31，PUT 仍 400。
    原因: Argo CD GET 返回的 JSON 无 apiVersion/kind，且含 metadata.managedFields；直接 PUT 不符合 v1alpha1Application 校验。
    修复: 改用 PATCH /api/v1/applications/<app>，patchType=merge（与 kubectl patch --type merge 及 build-cloudops-cicd-manual.sh 一致）。
+
+17. PATCH merge body 仍返回 400，patch 字段 JSON 无效（build #33）。
+   现象: 日志可见 PATCH_BODY='{"patch":"{"spec":...'，内层引号未转义。
+   原因: Jenkins Pipeline `sh '''` 中单写 `\"` 时 Groovy 会去掉反斜杠，curl 收到非法 JSON。
+   修复: heredoc 写 /tmp/argocd-patch-request.json，内容用 `\\"`，再 `curl --data @file`。
 ```
 
 ## 10. 后续优化
