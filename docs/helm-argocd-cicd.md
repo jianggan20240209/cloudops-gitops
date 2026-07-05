@@ -314,19 +314,38 @@ POST /api/v1/applications/<application-name>/sync
 curl 必须加 -f，确保 Argo CD API 返回非 2xx 时流水线失败。
 ```
 
-推荐 Jenkins 侧实现（`cloudops-platform` 三个 Kaniko Jenkinsfile 已采用）：
+推荐 Jenkins 侧实现（`cloudops-platform` 三个 Kaniko Jenkinsfile 已采用）：用 Groovy `writeFile` 生成 PATCH body，避免 shell/heredoc 转义问题。
 
-```bash
-cat > /tmp/argocd-patch-request.json <<'PATCH_EOF'
-{"name":"${ARGOCD_APP_NAME}","appNamespace":"argocd","patch":"{\\"spec\\":{\\"source\\":{\\"helm\\":{\\"parameters\\":[{\\"name\\":\\"app.imageTag\\",\\"value\\":\\"${IMAGE_TAG}\\",\\"forceString\\":true}]}}}}","patchType":"merge"}
-PATCH_EOF
-curl -fksS -X PATCH "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
-  -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}" \
-  -H "Content-Type: application/json" \
-  --data @/tmp/argocd-patch-request.json
+```groovy
+def patchInner = [
+  spec: [
+    source: [
+      helm: [
+        parameters: [
+          [name: 'app.imageTag', value: env.IMAGE_TAG, forceString: true]
+        ]
+      ]
+    ]
+  ]
+]
+def patchRequest = [
+  name: env.ARGOCD_APP_NAME,
+  appNamespace: 'argocd',
+  patch: groovy.json.JsonOutput.toJson(patchInner),
+  patchType: 'merge'
+]
+writeFile file: 'argocd-patch-request.json', text: groovy.json.JsonOutput.toJson(patchRequest)
 ```
 
-说明: Jenkins `sh '''` 中单写 `\"` 会被 Groovy 吞掉反斜杠；heredoc 必须用 `<<'PATCH_EOF'`（引号包住定界符），否则 shell 仍会把 `\"` 展开成 `"` 导致 patch 字段 JSON 无效（build #33/#34）。
+```bash
+curl -ksS -o /tmp/argocd-patch-response.json -w '%{http_code}' \
+  -X PATCH "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
+  -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}" \
+  -H "Content-Type: application/json" \
+  --data @"${WORKSPACE}/argocd-patch-request.json"
+```
+
+失败时打印 `/tmp/argocd-patch-response.json` 便于定位 Argo CD 返回的具体错误。
 
 备选：`PUT /api/v1/applications/<app>/spec` 只提交 ApplicationSpec；若用 `PUT /api/v1/applications/<app>` 则 body 须含 `apiVersion`/`kind`，且不能带 GET 返回的 `metadata.managedFields`。
 
@@ -1236,10 +1255,10 @@ cloudops-web / 返回前端 HTML 页面
    原因: Argo CD GET 返回的 JSON 无 apiVersion/kind，且含 metadata.managedFields；直接 PUT 不符合 v1alpha1Application 校验。
    修复: 改用 PATCH /api/v1/applications/<app>，patchType=merge（与 kubectl patch --type merge 及 build-cloudops-cicd-manual.sh 一致）。
 
-17. PATCH merge body 仍返回 400，patch 字段 JSON 无效（build #33/#34）。
-   现象: curl PATCH 400；若打印 body 可见 `{"patch":"{"spec":...` 内层引号未转义。
-   原因: (1) Jenkins `sh '''` 单写 `\"` 时 Groovy 去掉反斜杠；(2) heredoc 用 `<<PATCH_EOF` 无引号时 shell 仍会展开 `\"`。
-   修复: `<<'PATCH_EOF'` 引号定界 heredoc，内容用 `\\"`，并含 name/appNamespace；`curl --data @file`。
+17. PATCH merge body 仍返回 400，patch 字段 JSON 无效（build #33–#35）。
+   现象: curl PATCH 400；shell/heredoc 手工拼 JSON 时内层引号易丢失。
+   原因: Groovy `sh '''` 与 bash heredoc 多层转义不可靠。
+   修复: 用 Groovy `writeFile` + `JsonOutput.toJson` 生成 argocd-patch-request.json，curl `--data @${WORKSPACE}/argocd-patch-request.json`；失败时打印 response body。
 ```
 
 ## 10. 后续优化
