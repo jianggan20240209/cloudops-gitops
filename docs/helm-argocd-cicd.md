@@ -321,8 +321,8 @@ curl 必须加 -f，确保 Argo CD API 返回非 2xx 时流水线失败。
 APP_JSON="$(curl -fksS "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
   -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}")"
 
-# 2. 去掉 status / operation，只改 app.imageTag 参数值
-BODY="$(printf '%s' "${APP_JSON}" | sed 's/,"status":.*//; s/,"operation":.*//')"
+# 2. 去掉末尾顶层 status，只改 app.imageTag 参数值（勿用 s/,"operation":.*//，会误匹配 metadata.managedFields）
+BODY="$(printf '%s' "${APP_JSON}" | sed 's/,"status":{.*}$//')"
 BODY="$(printf '%s' "${BODY}" | sed 's/"name":"app.imageTag","value":"[^"]*"/"name":"app.imageTag","value":"'"${IMAGE_TAG}"'"/')"
 
 # 3. PUT 完整 body（不能只提交 spec 片段，否则会 400）
@@ -1222,6 +1222,16 @@ cloudops-web / 返回前端 HTML 页面
 13. Kaniko 使用国内 golang 基础镜像（避免 docker.io / Harbor base 同步）。
    配置: Jenkinsfile 环境变量 GO_BUILD_IMAGE=docker.m.daocloud.io/library/golang:1.23-alpine，--build-arg 传入 Dockerfile。
    cloudops-cicd 另设 GOPROXY=https://goproxy.cn,direct；NO_PROXY 增加 docker.m.daocloud.io,daocloud.io 直连国内镜像站。
+
+14. PUT Application 只提交手写 spec 片段返回 400（build #29）。
+   现象: curl: (22) The requested URL returned error: 400，Kaniko 已成功 push 镜像。
+   原因: Jenkinsfile 用最小 Application JSON 覆盖 PUT，缺少 metadata.resourceVersion 等字段。
+   修复: cloudops-platform e4d67e0 — GET 完整 Application → sed 更新 app.imageTag → 去掉 status/operation → PUT 完整 body。
+
+15. PUT Application 返回 400，body 在 managedFields 处被截断（build #30）。
+   现象: curl: (22) The requested URL returned error: 400；调试可见 PUT body 止于 `"managedFields":[{"manager":"kubectl-client-side-apply"`。
+   原因: `sed 's/,"operation":.*//'` 贪婪匹配 JSON 中第一个 `,"operation":`，误删 `metadata.managedFields[].operation`（值为 `"Update"`），而非顶层 operation 字段。
+   修复: 移除 operation sed；仅用 `sed 's/,"status":{.*}$//'` 去掉末尾顶层 status，再 sed 更新 spec.parameters 中 app.imageTag。
 ```
 
 ## 10. 后续优化
