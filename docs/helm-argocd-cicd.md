@@ -309,28 +309,22 @@ POST /api/v1/applications/<application-name>/sync
 注意：
 
 ```text
-不要使用 Content-Type: application/merge-patch+json。
-当前验证可用方式是使用 Content-Type: application/json，并提交完整 Application 结构。
+不要对 /api/v1/applications/<app> 直接发 HTTP PATCH 且 Content-Type: application/merge-patch+json（会返回 Invalid content type）。
+推荐用 Argo CD ApplicationService Patch：Content-Type: application/json，body 含 patch 字符串与 patchType=merge（等同 kubectl patch --type merge）。
 curl 必须加 -f，确保 Argo CD API 返回非 2xx 时流水线失败。
 ```
 
 推荐 Jenkins 侧实现（`cloudops-platform` 三个 Kaniko Jenkinsfile 已采用）：
 
 ```bash
-# 1. GET 完整 Application（含 metadata.resourceVersion）
-APP_JSON="$(curl -fksS "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
-  -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}")"
-
-# 2. 去掉末尾顶层 status，只改 app.imageTag 参数值（勿用 s/,"operation":.*//，会误匹配 metadata.managedFields）
-BODY="$(printf '%s' "${APP_JSON}" | sed 's/,"status":{.*}$//')"
-BODY="$(printf '%s' "${BODY}" | sed 's/"name":"app.imageTag","value":"[^"]*"/"name":"app.imageTag","value":"'"${IMAGE_TAG}"'"/')"
-
-# 3. PUT 完整 body（不能只提交 spec 片段，否则会 400）
-curl -fksS -X PUT "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
+PATCH_BODY='{"patch":"{\"spec\":{\"source\":{\"helm\":{\"parameters\":[{\"name\":\"app.imageTag\",\"value\":\"'"${IMAGE_TAG}"'\",\"forceString\":true}]}}}}","patchType":"merge"}'
+curl -fksS -X PATCH "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
   -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}" \
   -H "Content-Type: application/json" \
-  --data "${BODY}"
+  --data "${PATCH_BODY}"
 ```
+
+备选：`PUT /api/v1/applications/<app>/spec` 只提交 ApplicationSpec；若用 `PUT /api/v1/applications/<app>` 则 body 须含 `apiVersion`/`kind`，且不能带 GET 返回的 `metadata.managedFields`。
 
 ### 7.3 轮询发布结果
 
@@ -1232,6 +1226,11 @@ cloudops-web / 返回前端 HTML 页面
    现象: curl: (22) The requested URL returned error: 400；调试可见 PUT body 止于 `"managedFields":[{"manager":"kubectl-client-side-apply"`。
    原因: `sed 's/,"operation":.*//'` 贪婪匹配 JSON 中第一个 `,"operation":`，误删 `metadata.managedFields[].operation`（值为 `"Update"`），而非顶层 operation 字段。
    修复: 移除 operation sed；仅用 `sed 's/,"status":{.*}$//'` 去掉末尾顶层 status，再 sed 更新 spec.parameters 中 app.imageTag。
+
+16. PUT Application 完整 body 仍返回 400（build #31）。
+   现象: status 已正确剥离、spec 中 imageTag 已改为 main-31，PUT 仍 400。
+   原因: Argo CD GET 返回的 JSON 无 apiVersion/kind，且含 metadata.managedFields；直接 PUT 不符合 v1alpha1Application 校验。
+   修复: 改用 PATCH /api/v1/applications/<app>，patchType=merge（与 kubectl patch --type merge 及 build-cloudops-cicd-manual.sh 一致）。
 ```
 
 ## 10. 后续优化
