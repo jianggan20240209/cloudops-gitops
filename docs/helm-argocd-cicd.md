@@ -320,7 +320,7 @@ Pod 配置要点：
 
 ```text
 spec.serviceAccountName: jenkins-kaniko-agent
-sidecar 镜像: harbor-server.jianggan.cn/bitnami/kubectl:1.30.4
+sidecar 镜像: harbor-server.jianggan.cn/library/kubectl:1.30.4
 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
 ```
 
@@ -1254,21 +1254,26 @@ cloudops-web / 返回前端 HTML 页面
    原因: ApplicationService Patch 触发 repo-server 对 GitHub 执行 ls-remote，repo-server 无法访问 GitHub（EOF），即使仅更新 helm parameters 也拒绝 PATCH。
    修复:
      1) Jenkinsfile 改用 kubectl patch Application CR（与 build-cloudops-cicd-manual.sh 一致），不再依赖 Argo CD REST API 更新 imageTag / 触发 sync / 轮询状态。
-     2) Kaniko Pod 增加 kubectl sidecar（harbor-server.jianggan.cn/bitnami/kubectl:1.30.4）与 serviceAccountName: jenkins-kaniko-agent。
+     2) Kaniko Pod 增加 kubectl sidecar（harbor-server.jianggan.cn/library/kubectl:1.30.4）与 serviceAccountName: jenkins-kaniko-agent。
      3) 新增 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml（集群管理员 kubectl apply -f ...）。
-     4) mirror-harbor-base-images.sh 增加 bitnami/kubectl:1.30.4 同步到 Harbor bitnami 项目。
+     4) mirror-harbor-base-images.sh 将 docker.io/bitnami/kubectl:1.30.4 同步到 Harbor library/kubectl:1.30.4（与 harbor-pull-secret 授权一致）。
      5) Report Release Record 阶段仍保留 curl + argocd-auth-token。
    部署前检查（须先 git pull，本地 clone 过旧会报 path does not exist）:
      cd ~/tools/cloudops-gitops && git pull origin main
      bash scripts/bootstrap-jenkins-kaniko-deploy.sh
      # 或分步:
      kubectl apply -f dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
-     ONLY_IMAGES="bitnami/kubectl:1.30.4" PULL_TOOL=skopeo bash scripts/mirror-harbor-base-images.sh
+     ONLY_IMAGES="kubectl:1.30.4" PULL_TOOL=skopeo bash scripts/mirror-harbor-base-images.sh
 
 19. Jenkins Kaniko Pod 无法创建（build #37）。
    现象: Failure executing POST pods ... serviceaccount "jenkins-kaniko-agent" not found。
    原因: harbor-server 上 cloudops-gitops 未 git pull，RBAC 文件不存在，kubectl apply 未执行。
    修复: git pull 后 apply RBAC；仅同步 kubectl 镜像时用 ONLY_IMAGES + skopeo，避免 golang 等已存在镜像重复 pull 失败。
+
+20. kubectl sidecar 拉取 401 Unauthorized（build #38）。
+   现象: ErrImagePull harbor-server.jianggan.cn/bitnami/kubectl:1.30.4 401。
+   原因: harbor-pull-secret 的 robot 账号通常只授权 library/kaniko/cloudops，未授权 bitnami 项目；或镜像尚未 push。
+   修复: 将 kubectl 同步到 library/kubectl:1.30.4，Jenkinsfile 引用 harbor-server.jianggan.cn/library/kubectl:1.30.4。
 ```
 
 ## 10. 后续优化

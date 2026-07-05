@@ -15,14 +15,14 @@ PROXY="${HTTP_PROXY:-${http_proxy:-}}"
 DEST_CERT_DIR="${DEST_CERT_DIR:-/etc/docker/certs.d/${HARBOR}}"
 AUTH_FILE="${AUTH_FILE:-${DOCKER_CONFIG:-$HOME/.docker}/config.json}"
 PULL_TOOL="${PULL_TOOL:-auto}" # auto | skopeo | crane | docker
-# Mirror a subset only, e.g. ONLY_IMAGES="bitnami/kubectl:1.30.4"
+# Mirror a subset only, e.g. ONLY_IMAGES="kubectl:1.30.4"
 ONLY_IMAGES="${ONLY_IMAGES:-}"
 
 IMAGES=(
   "golang:1.23-alpine"
   "nginx:1.27-alpine"
   "busybox:1.36"
-  "bitnami/kubectl:1.30.4"
+  "kubectl:1.30.4"
 )
 
 export HTTP_PROXY="${PROXY}"
@@ -40,6 +40,10 @@ src_ref() {
   case "${name}" in
     busybox)
       printf 'docker.m.daocloud.io/library/%s:%s' "${name}" "${tag}"
+      ;;
+    kubectl)
+      # bitnami/kubectl -> harbor library/kubectl (harbor-pull-secret covers library)
+      printf 'docker.io/bitnami/kubectl:%s' "${tag}"
       ;;
     */*)
       printf 'docker.io/%s:%s' "${name}" "${tag}"
@@ -166,7 +170,7 @@ echo "Copy tool: ${TOOL}"
 if [[ -n "${ONLY_IMAGES}" ]]; then
   echo "ONLY_IMAGES: ${ONLY_IMAGES}"
 fi
-echo "Ensure Harbor projects 'library' and 'bitnami' exist and skopeo/docker is logged in to ${HARBOR}."
+echo "Ensure Harbor project 'library' exists and skopeo/docker is logged in to ${HARBOR}."
 echo
 
 for name_tag in "${IMAGES[@]}"; do

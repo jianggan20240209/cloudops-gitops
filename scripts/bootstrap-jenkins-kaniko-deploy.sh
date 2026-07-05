@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RBAC="${ROOT}/dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml"
-KUBECTL_IMAGE="${KUBECTL_IMAGE:-bitnami/kubectl:1.30.4}"
+KUBECTL_IMAGE="${KUBECTL_IMAGE:-kubectl:1.30.4}"
 
 if [[ -z "${HTTP_PROXY:-${http_proxy:-}}" && -f /etc/profile.d/proxy.sh ]]; then
   # shellcheck source=/dev/null
