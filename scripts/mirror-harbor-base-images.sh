@@ -15,6 +15,8 @@ PROXY="${HTTP_PROXY:-${http_proxy:-}}"
 DEST_CERT_DIR="${DEST_CERT_DIR:-/etc/docker/certs.d/${HARBOR}}"
 AUTH_FILE="${AUTH_FILE:-${DOCKER_CONFIG:-$HOME/.docker}/config.json}"
 PULL_TOOL="${PULL_TOOL:-auto}" # auto | skopeo | crane | docker
+# Mirror a subset only, e.g. ONLY_IMAGES="bitnami/kubectl:1.30.4"
+ONLY_IMAGES="${ONLY_IMAGES:-}"
 
 IMAGES=(
   "golang:1.23-alpine"
@@ -83,9 +85,25 @@ crane_copy() {
   crane copy "${src}" "${dest/ docker:\/\//}"
 }
 
+should_mirror() {
+  local name_tag="$1"
+  if [[ -z "${ONLY_IMAGES}" ]]; then
+    return 0
+  fi
+  local item
+  for item in ${ONLY_IMAGES}; do
+    if [[ "${name_tag}" == "${item}" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 docker_copy() {
   local name_tag="$1"
   local dest="$2"
+  local src
+  src="$(src_ref "${name_tag}")"
   local name="${name_tag%%:*}"
   local harbor_image
   if [[ "${name}" == */* ]]; then
@@ -104,8 +122,8 @@ docker_copy() {
   echo "      Prefer: apt install -y skopeo && PULL_TOOL=skopeo bash $0"
   echo "      Or: sudo bash scripts/fix-harbor-server-docker-proxy.sh --ipv6"
 
-  docker pull "${name_tag}"
-  docker tag "${name_tag}" "${harbor_image}"
+  docker pull "${src}"
+  docker tag "${src}" "${harbor_image}"
   docker push "${harbor_image}"
 }
 
@@ -142,13 +160,19 @@ if [[ "${TOOL}" == "docker" ]]; then
   echo "      Recommended: apt install -y skopeo" >&2
 fi
 
-echo "Harbor registry: ${HARBOR}/library/"
+echo "Harbor registry: ${HARBOR}"
 echo "Pull proxy: ${PROXY}"
 echo "Copy tool: ${TOOL}"
-echo "Ensure Harbor project 'library' exists and docker/skopeo is logged in to ${HARBOR}."
+if [[ -n "${ONLY_IMAGES}" ]]; then
+  echo "ONLY_IMAGES: ${ONLY_IMAGES}"
+fi
+echo "Ensure Harbor projects 'library' and 'bitnami' exist and skopeo/docker is logged in to ${HARBOR}."
 echo
 
 for name_tag in "${IMAGES[@]}"; do
+  if ! should_mirror "${name_tag}"; then
+    continue
+  fi
   src="$(src_ref "${name_tag}")"
   dest="$(dest_ref "${name_tag}")"
   echo "== ${src} -> ${dest} =="
@@ -160,4 +184,4 @@ for name_tag in "${IMAGES[@]}"; do
   echo
 done
 
-echo "PASS: base images mirrored to ${HARBOR}/library/"
+echo "PASS: selected base images mirrored to ${HARBOR}"

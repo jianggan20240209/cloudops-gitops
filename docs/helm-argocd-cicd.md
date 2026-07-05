@@ -254,7 +254,7 @@ jenkins-kaniko-agent:
   类型: Kubernetes ServiceAccount
   命名空间: devops
   用途: Kaniko Pod 内 kubectl 容器 patch Argo CD Application（无需 argocd-auth-token）
-  部署: kubectl apply -f dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
+  部署: cd cloudops-gitops && git pull && bash scripts/bootstrap-jenkins-kaniko-deploy.sh
 
 cloudops-cicd-harbor-credential:
   类型: Kubernetes Secret
@@ -1258,9 +1258,17 @@ cloudops-web / 返回前端 HTML 页面
      3) 新增 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml（集群管理员 kubectl apply -f ...）。
      4) mirror-harbor-base-images.sh 增加 bitnami/kubectl:1.30.4 同步到 Harbor bitnami 项目。
      5) Report Release Record 阶段仍保留 curl + argocd-auth-token。
-   部署前检查:
+   部署前检查（须先 git pull，本地 clone 过旧会报 path does not exist）:
+     cd ~/tools/cloudops-gitops && git pull origin main
+     bash scripts/bootstrap-jenkins-kaniko-deploy.sh
+     # 或分步:
      kubectl apply -f dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
-     bash scripts/mirror-harbor-base-images.sh  # 同步 kubectl 镜像
+     ONLY_IMAGES="bitnami/kubectl:1.30.4" PULL_TOOL=skopeo bash scripts/mirror-harbor-base-images.sh
+
+19. Jenkins Kaniko Pod 无法创建（build #37）。
+   现象: Failure executing POST pods ... serviceaccount "jenkins-kaniko-agent" not found。
+   原因: harbor-server 上 cloudops-gitops 未 git pull，RBAC 文件不存在，kubectl apply 未执行。
+   修复: git pull 后 apply RBAC；仅同步 kubectl 镜像时用 ONLY_IMAGES + skopeo，避免 golang 等已存在镜像重复 pull 失败。
 ```
 
 ## 10. 后续优化
