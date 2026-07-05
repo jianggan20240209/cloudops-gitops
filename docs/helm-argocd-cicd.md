@@ -320,7 +320,7 @@ Pod 配置要点：
 
 ```text
 spec.serviceAccountName: jenkins-kaniko-agent
-sidecar 镜像: harbor-server.jianggan.cn/kaniko/kubectl:1.30.4
+sidecar 镜像: 已移除；jnlp 容器内 curl 下载 kubectl ${KUBECTL_VERSION} 到 workspace/bin（无需 Harbor 同步）
 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
 ```
 
@@ -1273,7 +1273,16 @@ cloudops-web / 返回前端 HTML 页面
 20. kubectl sidecar 拉取 401 Unauthorized（build #38）。
    现象: ErrImagePull harbor-server.jianggan.cn/bitnami/kubectl:1.30.4 401。
    原因: harbor-pull-secret 的 robot 账号通常只授权 library/kaniko/cloudops，未授权 bitnami 项目；或镜像尚未 push。
-   修复: 将 kubectl 同步到 library/kubectl:1.30.4，Jenkinsfile 引用 harbor-server.jianggan.cn/library/kubectl:1.30.4。
+   修复: 将 kubectl 同步到 kaniko/kubectl:1.30.4，Jenkinsfile 引用 harbor-server.jianggan.cn/kaniko/kubectl:1.30.4；push 前须 docker login，脚本会 skopeo inspect 校验。
+
+21. library/kubectl not found（build #39）。
+   现象: skopeo 显示 PASS 但 Pod ErrImagePull library/kubectl:1.30.4 not found。
+   原因: skopeo 未 docker login Harbor 时 push 未真正写入；或 library 项目 push 权限不足。
+   修复: 改同步到 kaniko/kubectl（与 executor 同项目）；若 bitnami/kubectl 已存在可 skopeo copy 本地 retag；mirror 脚本增加 login 检查与 push 后 verify。
+
+22. kaniko/kubectl not found 持续（build #40）。
+   现象: Harbor 中 kaniko/kubectl 始终不存在，Pod ErrImagePull。
+   修复: 移除 kubectl sidecar；Prepare kubectl 阶段在 jnlp 容器从 dl.k8s.io 下载二进制到 workspace/bin，仍用 serviceAccount jenkins-kaniko-agent 执行 patch/sync/wait。Harbor 镜像同步变为可选。
 ```
 
 ## 10. 后续优化
