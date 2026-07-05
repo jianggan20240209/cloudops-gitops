@@ -97,18 +97,25 @@ git -c http.proxy='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' \
 
 若这里失败，先修复到 `8.222.223.161:32001` 的网络/认证，而不是改 Jenkinsfile。
 
-## 3. Jenkinsfile 内代理（Pipeline 阶段）
+## 3. Agent Pod 内 Checkout（Pipeline 阶段）
 
-`cloudops-platform` 三个 Kaniko Jenkinsfile 已配置：
+`cloudops-platform` 三个 Kaniko Jenkinsfile 在 **Checkout** 阶段通过 `GitConfigOption` 为 Git 插件注入：
 
 ```text
-HTTP_PROXY / HTTPS_PROXY / http_proxy / https_proxy = http://192.168.1.50:7890
-Prepare Git:
-  git config --global http.proxy http://192.168.1.50:7890
-  git config --global https.proxy http://192.168.1.50:7890
+http.version = HTTP/1.1
+http.proxy / https.proxy = http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001
 ```
 
-这只在 Pipeline **进入 stage 后**生效，用于 Checkout 源码和 Kaniko `go mod download`。
+日志里 `Prepare Git` 的 `http.proxy=` 可能被 Jenkins **脱敏**为空，不代表未设置；但 **`git` 简写步骤不会带上 `http.version`**，经 Jenkins UI 代理拉 GitHub 时易出现 GnuTLS recv error (-110)。
+
+**修复：** Checkout 改用 `checkout([$class: 'GitSCM', extensions: [[$class: 'GitConfigOption', ...]]])`（见 `Jenkinsfile.*-kaniko`）。
+
+在 Agent Pod 内验证（替换 Pod 名）：
+
+```bash
+kubectl -n devops exec -it <agent-pod> -c jnlp -- sh -c \
+  "git -c http.version=HTTP/1.1 -c http.proxy='http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001' ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD"
+```
 
 ## 4. 临时绕过（不依赖 Jenkins）
 
