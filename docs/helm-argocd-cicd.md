@@ -314,6 +314,24 @@ POST /api/v1/applications/<application-name>/sync
 curl 必须加 -f，确保 Argo CD API 返回非 2xx 时流水线失败。
 ```
 
+推荐 Jenkins 侧实现（`cloudops-platform` 三个 Kaniko Jenkinsfile 已采用）：
+
+```bash
+# 1. GET 完整 Application（含 metadata.resourceVersion）
+APP_JSON="$(curl -fksS "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
+  -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}")"
+
+# 2. 去掉 status / operation，只改 app.imageTag 参数值
+BODY="$(printf '%s' "${APP_JSON}" | sed 's/,"status":.*//; s/,"operation":.*//')"
+BODY="$(printf '%s' "${BODY}" | sed 's/"name":"app.imageTag","value":"[^"]*"/"name":"app.imageTag","value":"'"${IMAGE_TAG}"'"/')"
+
+# 3. PUT 完整 body（不能只提交 spec 片段，否则会 400）
+curl -fksS -X PUT "${ARGOCD_SERVER}/api/v1/applications/${ARGOCD_APP_NAME}" \
+  -H "Authorization: Bearer ${ARGOCD_AUTH_TOKEN}" \
+  -H "Content-Type: application/json" \
+  --data "${BODY}"
+```
+
 ### 7.3 轮询发布结果
 
 Jenkins 每 5 秒查询一次：
