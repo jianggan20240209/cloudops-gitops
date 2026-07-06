@@ -12,9 +12,9 @@ CI/CD 目标链路：
 -> Kaniko 构建镜像
 -> 镜像 tag 使用 main-${BUILD_NUMBER}
 -> 推送到 Harbor
--> Jenkins 通过 kubectl patch 更新 Argo CD Application Helm 参数 app.imageTag
--> Jenkins 通过 kubectl patch operation 触发应用同步
--> Jenkins 轮询 Argo CD Application 状态（kubectl jsonpath）
+-> Jenkins 通过 curl + K8s API merge-patch 更新 Argo CD Application Helm 参数 app.imageTag
+-> Jenkins 通过 curl + K8s API 触发 hard refresh 与应用同步
+-> Jenkins 轮询 Argo CD Application 状态（curl GET Application JSON）
 -> Synced / Healthy 后流水线成功
 -> cloudops-cicd 流水线额外调用 Argo CD API 上报 Release Record
 ```
@@ -253,7 +253,7 @@ argocd-auth-token:
 jenkins-kaniko-agent:
   类型: Kubernetes ServiceAccount
   命名空间: devops
-  用途: Kaniko Pod 内 kubectl 容器 patch Argo CD Application（无需 argocd-auth-token）
+  用途: Kaniko Pod 内 curl 容器通过 K8s API patch Argo CD Application（无需 argocd-auth-token、无需下载 kubectl）
   部署: cd cloudops-gitops && git pull && bash scripts/bootstrap-jenkins-kaniko-deploy.sh
 
 cloudops-cicd-harbor-credential:
@@ -291,36 +291,41 @@ harbor-server.jianggan.cn/cloudops/cloudops-web:main-8
 
 不再依赖 `latest` 触发发布。
 
-### 7.2 kubectl patch 更新 Helm 参数
+### 7.2 curl + K8s API 更新 Helm 参数
 
-Jenkins 构建镜像成功后，在 Kaniko Pod 的 `kubectl` sidecar 中执行（与 `scripts/build-cloudops-cicd-manual.sh` 一致）：
-
-```bash
-kubectl -n argocd patch application "${ARGOCD_APP_NAME}" --type merge \
-  -p "{\"spec\":{\"source\":{\"helm\":{\"parameters\":[{\"name\":\"app.imageTag\",\"value\":\"${IMAGE_TAG}\",\"forceString\":true}]}}}}"
-```
-
-校验：
+Jenkins 构建镜像成功后，在 Kaniko Pod 的 `curl` 容器内使用 ServiceAccount token 调用 K8s API（与 `kubectl patch --type merge` 等价，不经过 Argo CD REST / repo-server 校验）：
 
 ```bash
-kubectl -n argocd get application "${ARGOCD_APP_NAME}" \
-  -o jsonpath='{.spec.source.helm.parameters[?(@.name=="app.imageTag")].value}'
+K8S_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+K8S_SA_CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+K8S_ARGOCD_APP_API="https://kubernetes.default.svc/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/${ARGOCD_APP_NAME}"
+
+curl -fsS --cacert "${K8S_SA_CA}" \
+  -H "Authorization: Bearer ${K8S_SA_TOKEN}" \
+  -H "Content-Type: application/merge-patch+json" \
+  -X PATCH \
+  --data @"${WORKSPACE}/argocd-image-tag-patch.json" \
+  "${K8S_ARGOCD_APP_API}"
 ```
+
+`argocd-image-tag-patch.json` 由 Jenkins `writeFile` + `JsonOutput` 生成，避免 shell 转义丢失引号。
+
+校验：GET Application JSON，解析 `app.imageTag` 参数值。
 
 触发同步：
 
 ```bash
-kubectl -n argocd annotate application "${ARGOCD_APP_NAME}" \
-  argocd.argoproj.io/refresh=hard --overwrite
-kubectl -n argocd patch application "${ARGOCD_APP_NAME}" --type merge \
-  -p '{"operation":{"sync":{"revision":"main","prune":true}}}'
+# hard refresh（等价于 kubectl annotate argocd.argoproj.io/refresh=hard）
+curl ... -X PATCH --data @argocd-refresh-patch.json "${K8S_ARGOCD_APP_API}"
+# 触发 sync operation
+curl ... -X PATCH --data @argocd-sync-patch.json "${K8S_ARGOCD_APP_API}"
 ```
 
 Pod 配置要点：
 
 ```text
 spec.serviceAccountName: jenkins-kaniko-agent
-sidecar 镜像: 已移除；jnlp 容器内 curl 下载 kubectl ${KUBECTL_VERSION} 到 workspace/bin（无需 Harbor 同步）
+Argo CD 阶段: container('curl')，无需 Prepare kubectl、无需 Harbor kubectl 镜像
 RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
 ```
 
@@ -329,21 +334,21 @@ RBAC: dev/platform/jenkins/rbac/jenkins-kaniko-agent.yaml
 ```text
 Argo CD ApplicationService Patch 会校验 repo 连通性，触发 repo-server 对 GitHub 执行 ls-remote。
 当 repo-server 无法访问 GitHub（EOF）时，即使仅更新 helm parameters 也会返回 HTTP 400。
-kubectl patch 直接写 Application CR，不经过 repo-server 连通性校验，与手动脚本行为一致。
+K8s API merge-patch Application CR 直接写 CR，不经过 repo-server 连通性校验，与手动脚本行为一致。
 ```
 
 `cloudops-cicd` 流水线的 Report Release Record 阶段仍使用 Argo CD REST API + argocd-auth-token 读取 revision。
 
-备选（历史方案，已弃用）：Argo CD REST API PATCH/PUT、curl + writeFile 生成 patch body。
+备选（历史方案，已弃用）：kubectl sidecar / jnlp 下载 kubectl、Argo CD REST API PATCH/PUT。
 
 ### 7.3 轮询发布结果
 
-Jenkins 每 5 秒通过 kubectl 查询一次：
+Jenkins 每 5 秒通过 curl GET Application 一次，从 JSON 解析：
 
-```bash
-kubectl -n argocd get application "${ARGOCD_APP_NAME}" -o jsonpath='{.status.sync.status}'
-kubectl -n argocd get application "${ARGOCD_APP_NAME}" -o jsonpath='{.status.health.status}'
-kubectl -n argocd get application "${ARGOCD_APP_NAME}" -o jsonpath='{.status.operationState.phase}'
+```text
+status.sync.status
+status.health.status
+status.operationState.phase
 ```
 
 成功条件：
@@ -1288,6 +1293,20 @@ cloudops-web / 返回前端 HTML 页面
    现象: kubectl patch -p 报 invalid character 's'；日志中 JSON 键无引号。
    原因: sh 块内 -p "{\"spec\":...}" 转义在 Jenkins 执行时被剥离。
    修复: writeFile + JsonOutput 生成 patch JSON，kubectl --patch-file；curl 下载 kubectl 时加 -x HTTP_PROXY。
+
+24. Prepare kubectl bash 数组语法错误（build #43）。
+   现象: `/bin/sh: Syntax error: "(" unexpected`。
+   原因: jnlp 容器默认 `/bin/sh` 非 bash，不支持 `urls=(...)` 数组。
+   修复: 改为 POSIX `for spec in "no|url" ...` 循环。
+
+25. Checkout 偶发失败 / 控制器 SCM 无代理（build #44）。
+   现象: git fetch timeout 或控制器拉 Jenkinsfile 失败。
+   修复: Jenkinsfile 增加 `PROXY_URL` + checkout `retry(3)`；Jenkins Helm values 配置 `GIT_CONFIG_*` 与 initScripts git-github-proxy。
+
+26. Prepare kubectl 全镜像源失败（build #45–#47）。
+   现象: 阿里云/华为云 `kubectl/v1.30.4` 路径 404；`dl.k8s.io` 经代理 300s 超时（仅下载部分字节）。
+   原因: 国内镜像路径与版本不匹配；大文件经 HTTP 代理不稳定。
+   修复: 移除 Prepare kubectl 阶段；Argo CD 更新/Sync/Wait 改为 `container('curl')` + ServiceAccount token 直接 merge-patch `https://kubernetes.default.svc/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/<app>`。三个 Kaniko Jenkinsfile 均已同步。
 ```
 
 ## 10. 后续优化
