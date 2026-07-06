@@ -149,3 +149,38 @@ Jenkins 构建日志应出现：
 ```
 
 而不是在 `Started by user` 后直接 `GitException` 退出。
+
+## 7. Connection reset by peer（控制器 SCM）
+
+```text
+fatal: unable to access 'https://github.com/.../cloudops-platform.git/':
+Recv failure: Connection reset by peer
+```
+
+发生在 **CpsScmFlowDefinition**（控制器拉 Jenkinsfile），尚未创建 Agent Pod。
+
+处理：
+
+1. 在 harbor-server 执行（立即生效）：
+
+```bash
+cd ~/tools/cloudops-gitops && git pull
+bash scripts/setup-jenkins-controller-git-proxy-k8s.sh
+```
+
+2. 持久化（需 helm upgrade 后重启 jenkins-0）：
+
+`dev/platform/jenkins/helm/values-dev.yaml` 已配置 `controller.containerEnv` 的 `GIT_CONFIG_*` 与 `controller.initScripts.git-github-proxy`。
+
+```bash
+# 在部署机执行 helm upgrade（按你们现有流程）
+kubectl -n devops delete pod jenkins-0
+kubectl -n devops wait --for=condition=Ready pod/jenkins-0 --timeout=600s
+```
+
+3. 代理瞬时故障时直接 **重试构建**；若连续失败，在 jenkins-0 内验证：
+
+```bash
+kubectl -n devops exec -it jenkins-0 -c jenkins -- \
+  git ls-remote https://github.com/jianggan20240209/cloudops-platform.git HEAD
+```

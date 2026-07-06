@@ -43,6 +43,48 @@ controller:
       value: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
     - name: no_proxy
       value: "localhost,127.0.0.1,::1,192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,.svc,.cluster.local,.jianggan.cn,harbor-server.jianggan.cn,jenkins.jianggan.cn,argocd.jianggan.cn,demo.jianggan.cn,docker.m.daocloud.io,daocloud.io,8.222.223.161,192.168.1.50,192.168.1.200"
+    # Git 2.35+：控制器 SCM 拉 Jenkinsfile 时 git fetch 读取 GIT_CONFIG_*
+    - name: GIT_CONFIG_COUNT
+      value: "5"
+    - name: GIT_CONFIG_KEY_0
+      value: "http.version"
+    - name: GIT_CONFIG_VALUE_0
+      value: "HTTP/1.1"
+    - name: GIT_CONFIG_KEY_1
+      value: "http.proxy"
+    - name: GIT_CONFIG_VALUE_1
+      value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
+    - name: GIT_CONFIG_KEY_2
+      value: "https.proxy"
+    - name: GIT_CONFIG_VALUE_2
+      value: "http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001"
+    - name: GIT_CONFIG_KEY_3
+      value: "http.lowSpeedLimit"
+    - name: GIT_CONFIG_VALUE_3
+      value: "0"
+    - name: GIT_CONFIG_KEY_4
+      value: "http.lowSpeedTime"
+    - name: GIT_CONFIG_VALUE_4
+      value: "999999"
+
+  # 启动时写入 /var/jenkins_home/.gitconfig，与 GIT_CONFIG_* 双保险
+  initScripts:
+    git-github-proxy: |
+      def home = System.getenv('JENKINS_HOME') ?: '/var/jenkins_home'
+      def proxy = 'http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001'
+      [
+        'http.proxy'       : proxy,
+        'https.proxy'      : proxy,
+        'http.version'     : 'HTTP/1.1',
+        'http.lowSpeedLimit': '0',
+        'http.lowSpeedTime' : '999999',
+      ].each { key, value ->
+        def pb = new ProcessBuilder('git', 'config', '--global', key, value)
+        pb.environment().put('HOME', home)
+        def p = pb.start()
+        p.waitFor()
+        println "git-github-proxy: git config --global ${key} exit=${p.exitValue()}"
+      }
 
   # init 容器下载插件时不继承 containerEnv，必须单独配置
   initContainerEnv:

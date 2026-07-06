@@ -4,8 +4,9 @@ set -euo pipefail
 
 GIT_PROXY="${GIT_PROXY:-http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001}"
 REPO_URL="${REPO_URL:-https://github.com/jianggan20240209/cloudops-platform.git}"
-JENKINS_NS="${JENKINS_NS:-}"
-JENKINS_POD="${JENKINS_POD:-}"
+JENKINS_NS="${JENKINS_NS:-devops}"
+JENKINS_POD="${JENKINS_POD:-jenkins-0}"
+JENKINS_CONTAINER="${JENKINS_CONTAINER:-jenkins}"
 
 find_jenkins_pod() {
   if [[ -n "${JENKINS_NS}" && -n "${JENKINS_POD}" ]]; then
@@ -36,7 +37,7 @@ echo "Using namespace=${NS} pod=${POD}"
 
 echo
 echo "== run git proxy setup inside Jenkins pod =="
-kubectl -n "${NS}" exec "${POD}" -- bash -s <<EOF
+kubectl -n "${NS}" exec "${POD}" -c "${JENKINS_CONTAINER}" -- bash -s <<EOF
 set -euo pipefail
 export JENKINS_HOME=/var/jenkins_home
 export HOME=/var/jenkins_home
