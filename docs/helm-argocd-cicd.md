@@ -1315,6 +1315,12 @@ cloudops-web / 返回前端 HTML 页面
      1) 校验 imageTag 时先 `sed 's/"status":{.*$//'` 去掉 status（避免误匹配 history），再 `tr -d '\n\r\t '` 折叠空白，最后用紧凑 sed 提取 `app.imageTag`。
      2) Wait 阶段对整段 JSON `tr -d '\n\r\t '` 折叠后再 sed 提取 sync/health/operationState。
      3) 三个 Kaniko Jenkinsfile 均已同步。
+   注: build #49 表明仅 strip status 仍不足（见 #29）。
+
+29. sed 校验读到 status.comparedTo 旧 tag（build #49）。
+   现象: PATCH 已写入 `spec.app.imageTag=main-49`；校验报 `expected main-49, got main-48`（来自 `status.sync.comparedTo` 缓存）。
+   原因: `sed 's/"status":{.*$//'` 在 **pretty-print 多行 JSON** 上 `.*$` 仅匹配单行，status 块未剥离；折叠后 sed 贪婪匹配到最后一个 `app.imageTag`（comparedTo 的 main-48）。
+   修复: **先** `tr -d '\n\r\t '` 压成单行，**再** `sed 's/"status":{.*$//'` 去掉 status，最后从剩余 spec 提取 tag。Wait/Report 阶段 sync/health 改为 `"sync":{.*"status":"..."` / `"health":{.*"status":"..."`（兼容 `lastTransitionTime` 等前置字段）。
 
 28. Argo CD ComparisonError，repo-server 代理不可达（build #48 后续）。
    现象: Application `status.conditions` 含 `ComparisonError`；`sync.status=Unknown`；repo-server 日志 `proxyconnect tcp: dial tcp 192.168.1.50:7890: connect: connection refused`。
