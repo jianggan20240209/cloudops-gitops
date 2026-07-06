@@ -1331,6 +1331,7 @@ cloudops-web / 返回前端 HTML 页面
      2) 将 repo-server（建议连同 argocd-application-controller）的 `HTTP_PROXY`/`HTTPS_PROXY`/`http_proxy`/`https_proxy` 改为 `http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001`（与 Jenkins/Harbor 外网代理一致，见 `docs/jenkins-github-scm-proxy.md`）。
      3) 若 Argo CD 由 Helm 安装，在 values 中设置 `repoServer.env` / `controller.env` 后 `helm upgrade`；或 `kubectl -n argocd set env deployment/argocd-repo-server HTTP_PROXY=... HTTPS_PROXY=...` 后等待 Pod 滚动。
      4) 验证: `kubectl -n argocd logs deploy/argocd-repo-server --tail=50` 无 connection refused；Application ComparisonError 消失、`sync.status` 恢复。
+     5) 一键脚本（harbor-server）: `cd cloudops-gitops && git pull && bash scripts/setup-argocd-repo-server-proxy-k8s.sh`
 ```
 
 ## 10. 后续优化

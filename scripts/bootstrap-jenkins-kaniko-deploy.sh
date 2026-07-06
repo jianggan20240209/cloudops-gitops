@@ -47,5 +47,13 @@ else
 fi
 
 echo
+echo "== optional: fix Argo CD repo-server GitHub proxy =="
+if kubectl -n argocd get deploy argocd-repo-server >/dev/null 2>&1; then
+  bash "${ROOT}/scripts/setup-argocd-repo-server-proxy-k8s.sh" || echo "WARN: argocd proxy setup failed (run manually)"
+else
+  echo "SKIP: argocd-repo-server not found"
+fi
+
+echo
 echo "PASS: RBAC applied and ${KUBECTL_IMAGE} mirrored."
 echo "Re-run Jenkins job test-cloudops-cicd-kaniko."
