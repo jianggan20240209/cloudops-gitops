@@ -1307,6 +1307,24 @@ cloudops-web / 返回前端 HTML 页面
    现象: 阿里云/华为云 `kubectl/v1.30.4` 路径 404；`dl.k8s.io` 经代理 300s 超时（仅下载部分字节）。
    原因: 国内镜像路径与版本不匹配；大文件经 HTTP 代理不稳定。
    修复: 移除 Prepare kubectl 阶段；Argo CD 更新/Sync/Wait 改为 `container('curl')` + ServiceAccount token 直接 merge-patch `https://kubernetes.default.svc/apis/argoproj.io/v1alpha1/namespaces/argocd/applications/<app>`。三个 Kaniko Jenkinsfile 均已同步。
+
+27. sed 校验 imageTag 误报失败（build #48）。
+   现象: Kaniko push 成功；K8s API PATCH 已写入 `spec.source.helm.parameters` 中 `app.imageTag=main-48`；但 Update Argo CD Helm Parameter 阶段报 `Failed to update app.imageTag: expected main-48, got <empty>`。
+   原因: K8s API GET Application 返回 pretty-printed JSON（含换行/缩进空格），sed 模式 `"name":"app.imageTag","value":"..."` 要求紧凑格式，匹配失败返回空。Wait Argo CD Healthy 阶段对 `sync.status` / `health.status` / `operationState.phase` 存在同样问题。
+   修复:
+     1) 校验 imageTag 时先 `sed 's/"status":{.*$//'` 去掉 status（避免误匹配 history），再 `tr -d '\n\r\t '` 折叠空白，最后用紧凑 sed 提取 `app.imageTag`。
+     2) Wait 阶段对整段 JSON `tr -d '\n\r\t '` 折叠后再 sed 提取 sync/health/operationState。
+     3) 三个 Kaniko Jenkinsfile 均已同步。
+
+28. Argo CD ComparisonError，repo-server 代理不可达（build #48 后续）。
+   现象: Application `status.conditions` 含 `ComparisonError`；`sync.status=Unknown`；repo-server 日志 `proxyconnect tcp: dial tcp 192.168.1.50:7890: connect: connection refused`。
+   原因: argocd-repo-server Pod 仍配置家庭 Clash 代理 `192.168.1.50:7890`（公司网络不可达），无法经代理访问 GitHub 做 manifest 比对。
+   仓库检索: cloudops-gitops 中 **未找到** Argo CD Helm values 或 repo-server 代理清单（`dev/platform/argocd/` 仅有 Application/Project CR）。ansible `cluster-http-proxy` 角色仅配置节点级 `/etc/profile.d/proxy.sh` 与 docker/containerd systemd drop-in（`ansible/group_vars/all/proxy.yml` 已指向 `8.222.223.161:32001`），不覆盖 K8s 内 argocd-repo-server Deployment 环境变量。
+   建议修复（须集群管理员确认后执行，勿由 CI 自动 apply）:
+     1) 查看当前配置: `kubectl -n argocd get deploy argocd-repo-server -o yaml | grep -A2 HTTP_PROXY`
+     2) 将 repo-server（建议连同 argocd-application-controller）的 `HTTP_PROXY`/`HTTPS_PROXY`/`http_proxy`/`https_proxy` 改为 `http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001`（与 Jenkins/Harbor 外网代理一致，见 `docs/jenkins-github-scm-proxy.md`）。
+     3) 若 Argo CD 由 Helm 安装，在 values 中设置 `repoServer.env` / `controller.env` 后 `helm upgrade`；或 `kubectl -n argocd set env deployment/argocd-repo-server HTTP_PROXY=... HTTPS_PROXY=...` 后等待 Pod 滚动。
+     4) 验证: `kubectl -n argocd logs deploy/argocd-repo-server --tail=50` 无 connection refused；Application ComparisonError 消失、`sync.status` 恢复。
 ```
 
 ## 10. 后续优化
