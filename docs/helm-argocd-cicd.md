@@ -349,6 +349,17 @@ Jenkins 每 5 秒通过 curl GET Application 一次，从 JSON 解析：
 status.sync.status
 status.health.status
 status.operationState.phase
+status.conditions（type=ComparisonError 时立即失败）
+```
+
+解析要点（build #50 后修复）：
+
+```text
+1. 先 tr -d 折叠空白，再 sed 's/"resources":\[.*$//' 去掉 resources 数组，避免误匹配资源级 status 字段。
+2. sync:     "sync":{.*"status":"..."
+3. health:   "health":{[^}]*"status":"..."   （限制在 health 对象内，不跨 resources）
+4. operation: "operationState":{.*"phase":"..."  （phase 可能在 operation 字段之后）
+5. ComparisonError: 从 conditions 提取 message，第一轮即 exit 1，不再空等 5 分钟。
 ```
 
 成功条件：
@@ -358,9 +369,10 @@ sync.status = Synced
 health.status = Healthy
 ```
 
-失败条件：
+失败条件（立即失败，不等待 60 轮）：
 
 ```text
+conditions 含 ComparisonError（例如 repo-server 代理不可达）
 operationState.phase = Failed
 operationState.phase = Error
 ```
@@ -1332,7 +1344,96 @@ cloudops-web / 返回前端 HTML 页面
      3) 若 Argo CD 由 Helm 安装，在 values 中设置 `repoServer.env` / `controller.env` 后 `helm upgrade`；或 `kubectl -n argocd set env deployment/argocd-repo-server HTTP_PROXY=... HTTPS_PROXY=...` 后等待 Pod 滚动。
      4) 验证: `kubectl -n argocd logs deploy/argocd-repo-server --tail=50` 无 connection refused；Application ComparisonError 消失、`sync.status` 恢复。
      5) 一键脚本（harbor-server）: `cd cloudops-gitops && git pull && bash scripts/setup-argocd-repo-server-proxy-k8s.sh`
+
+30. Jenkins Wait Argo CD Healthy 空等 5 分钟 + 状态解析错误（build #50）。
+   现象:
+     - Update Argo CD Helm Parameter 成功（`app.imageTag=main-50`），Wait 阶段 60 次后超时。
+     - 日志 `sync=Unknown health=Unknown operation=none`，未在首轮失败。
+     - Application 实际 `operationState.phase=Error`，`health.status=Healthy`，`conditions` 含 ComparisonError。
+   根因:
+     1) **基础设施**: argocd-repo-server 仍使用旧代理 `192.168.1.50:7890`，repo-server 无法 `git ls-remote` GitHub，触发 ComparisonError；`sync.status=Unknown`。
+     2) **Jenkinsfile 解析**: 折叠 JSON 后 `operationState` 内 `phase` 位于 `operation` 字段之后，原模式 `"operationState":{"phase":"..."` 匹配失败，`OPERATION_PHASE` 为空。
+     3) **health 误匹配**: 未剥离 `resources` 数组时，sed 可能匹配到资源级 `status` 而非 `health.status`。
+     4) **无 ComparisonError 快失败**: Wait 循环未检查 `status.conditions`，ComparisonError 时仍 sleep 5s × 60。
+   Jenkinsfile 修复（三个 Kaniko Jenkinsfile 已同步）:
+     - 剥离 `resources` 后再解析 sync/health/operationState。
+     - `OPERATION_PHASE`: `"operationState":{.*"phase":"..."`。
+     - `HEALTH_STATUS`: `"health":{[^}]*"status":"..."`。
+     - 检测 `ComparisonError` message 后立即 `exit 1` 并打印完整错误（例如 proxyconnect connection refused）。
+   harbor-server 修复步骤见下文 **「build #50：repo-server 代理修复」**。
+   注: 后来发现「用 sed 截断到第一个 `"resources":[`」会误删 `status.sync`/`status.health`，见 #31。
+
+31. Wait Argo CD Healthy 假超时（`sync=unknown`，应用实际已 Synced/Healthy）。
+   现象: 镜像已推送、Argo CD UI/CLI 显示 Synced+Healthy，但 Jenkins Wait 阶段 60×5s 超时，日志一直 `sync=unknown health=unknown`。
+   原因: `sed 's/"resources":\[.*$//'` 从**第一个** `"resources":[` 截到行尾。Argo CD Application JSON 里 `status.resources`（或 `operationState.syncResult.resources`）常出现在 `status.sync` / `status.health` **之前**，截断后 sync/health 字段丢失，解析结果恒为空。
+   修复: curl 容器无 jq 时，用 awk **按括号匹配删除每一个** `"resources":[...]` 数组，再提取 `status.sync.status` / `status.health.status` / `operationState.phase` / ComparisonError。三个 Kaniko Jenkinsfile 的 Wait 阶段与 cicd Report 阶段已同步（commit `78f748d`）。
+
+### build #50：repo-server 代理修复（harbor-server）
+
+**症状**
+
+```text
+kubectl -n argocd get application cloudops-cicd-dev -o jsonpath='{.status.conditions[?(@.type=="ComparisonError")].message}{"\n"}'
+# failed to list refs: ... proxyconnect tcp: dial tcp 192.168.1.50:7890: connect: connection refused
 ```
+
+**标准修复**
+
+```bash
+cd ~/tools/cloudops-gitops
+git pull origin main
+bash scripts/setup-argocd-repo-server-proxy-k8s.sh
+```
+
+脚本会：
+
+```text
+1. kubectl set env deployment/argocd-repo-server（及 argocd-application-controller）设置公司代理
+2. 校验 Deployment template 中 HTTP_PROXY/HTTPS_PROXY 已写入
+3. 等待 rollout；若超时且新 Pod 已 Ready，自动 force-delete 卡住的 Terminating 旧 Pod 并重试
+4. 在 repo-server Pod 内探测 https://github.com
+5. hard refresh cloudops-cicd-dev 并等待 ComparisonError 消失
+```
+
+**若 rollout 超时**
+
+```bash
+# 仅诊断，不 patch
+DIAGNOSE_ONLY=1 bash scripts/setup-argocd-repo-server-proxy-k8s.sh
+
+# 查看 Pod
+kubectl -n argocd get pods -l app.kubernetes.io/name=argocd-repo-server -o wide
+
+# 新 Pod Running/Ready 但旧 Pod 卡在 Terminating 时
+kubectl -n argocd delete pod <old-repo-server-pod> --grace-period=0 --force
+kubectl -n argocd rollout status deployment/argocd-repo-server --timeout=600s
+
+# 或重新跑脚本（默认 FORCE_UNSTICK=1 会自动处理）
+bash scripts/setup-argocd-repo-server-proxy-k8s.sh
+```
+
+**验证代理已生效**
+
+```bash
+kubectl -n argocd get deploy argocd-repo-server \
+  -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="HTTP_PROXY")].value}{"\n"}'
+# 应为 http://vv-ai:w16y%2A3w2g862@8.222.223.161:32001，不应含 192.168.1.50
+
+kubectl -n argocd exec deploy/argocd-repo-server -- printenv HTTP_PROXY
+
+kubectl -n argocd annotate application cloudops-cicd-dev \
+  argocd.argoproj.io/refresh=hard --overwrite
+
+kubectl -n argocd get application cloudops-cicd-dev -o jsonpath='sync={.status.sync.status} health={.status.health.status}{"\n"}'
+```
+
+**代理修复后重跑 Jenkins**
+
+```text
+test-cloudops-cicd-kaniko
+```
+
+修复后的 Wait 阶段会在首轮检测到 ComparisonError 并立即失败（附带 proxy 错误信息），避免无意义 5 分钟等待；代理修复后应能正常等到 Synced/Healthy。
 
 ## 10. 后续优化
 
