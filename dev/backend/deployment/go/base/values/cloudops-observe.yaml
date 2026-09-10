@@ -3,10 +3,10 @@ base:
   namespace: cloudops-dev
 
 app:
-  serviceName: cloudops-gateway
+  serviceName: cloudops-observe
   servicePort: 80
-  ingressPath: /api
-  imageTag: main-8
+  ingressPath: /api/v1/observe
+  imageTag: main-1
   replicas: 2
 
 service:
@@ -35,12 +35,12 @@ prometheus:
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
 
 victorialogs:
-  enabled: false
+  enabled: true
   server: http://vls-victoria-logs-single-server.logging.svc.cluster.local:9428
 
 kubernetes:
   enabled: false
-  serviceAccountName: cloudops-cicd
+  serviceAccountName: cloudops-observe
 
 releaseRecords:
   database:
