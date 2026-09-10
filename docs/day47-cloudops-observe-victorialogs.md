@@ -58,6 +58,13 @@ curl -sk 'https://cloudops.jianggan.cn/api/v1/observe/logs?namespace=cloudops-de
 
 ## 验收标准
 
-- [ ] `cloudops-observe-dev` Synced / Healthy
-- [ ] `/api/v1/observe/logs` 返回 JSON，`items[].trace_id` 可解析
-- [ ] 首页可按 Pod / trace_id 查出 gateway 日志
+- [x] `cloudops-observe-dev` Synced / Healthy（2026-09-10）
+- [x] `/api/v1/observe/logs` 返回 JSON，`items[].trace_id` 可解析（2026-09-10）
+- [x] 首页可按 Pod / trace_id 查出 gateway 日志（2026-09-10）
+
+## 验收记录
+
+- 日期：2026-09-10
+- 验证：`curl -sk 'https://cloudops.jianggan.cn/api/v1/observe/logs?namespace=cloudops-dev&container=cloudops-gateway&trace_id=day46-trace-001&limit=5'`
+- 结果：返回 `count=2`，日志项已解析出 `trace_id` / `request_id`
+- 备注：此前 `ImagePullBackOff` 是因为镜像 tag `main-1` 尚不存在，Jenkins 构建出镜像后恢复正常
