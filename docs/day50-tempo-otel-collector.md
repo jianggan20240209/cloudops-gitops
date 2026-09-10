@@ -9,11 +9,15 @@ Beyla / SDK ──OTLP──► otel-collector ──► Tempo
 日志仍：Alloy → VictoriaLogs（ADR-002）
 ```
 
-## 部署（确认后）
+## 验收（2026-09-10）
+
+- [x] `tracing`：Tempo 1/1 Running（PVC 20Gi）
+- [x] `otel-collector` 1/1 Running（config 使用 `debug`，勿用已废弃的 `logging`）
+- [x] OTLP：`:4317` gRPC / `:4318` HTTP；健康检查 `:13133`
+
+## 部署
 
 ```bash
-# 1) 镜像进 Harbor（若尚未）
-# 2)
 cd ~/code/cloudops-gitops && git pull
 bash scripts/day50-deploy-tempo-otel.sh
 ```
