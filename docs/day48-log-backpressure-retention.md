@@ -11,15 +11,13 @@
 | 高基数 | **禁止** `trace_id`/`request_id` 作流标签；作字段/全文 |
 | 降噪 | Alloy drop `/healthz` `/readyz` `/metrics`；debug 可采样 |
 | 反压 | 先降噪再扩容；Alloy/VL 设 limits；P0/P1 不主动丢 |
+| 采集命名 | Alloy 组件名仍为 `loki.*`（Loki **兼容推送协议**）；后端是 **VictoriaLogs**，未部署 Loki |
 
-## 只读验收
+## 验收记录（2026-09-10）
 
-```bash
-kubectl -n logging get pvc
-curl -sk 'https://cloudops.jianggan.cn/api/v1/observe/logs?namespace=cloudops-dev&trace_id=day46-trace-001&limit=3'
-```
+- [x] PVC `80Gi` Bound；observe 按 `day46-trace-001` 仍可查
+- [x] `alloy-config` 已含 `stage.drop`（probe/metrics）；滚动后最新 `/readyz` 停在改造前 `12:42`，无持续新增
+- [x] 已删除 `stage.labels` 中的 `trace_id`/`request_id`；仅保留 `namespace/pod/container/cluster`
+- [x] Alloy DS 10/10 Ready
 
-## 运行态变更（需确认）
-
-Alloy ConfigMap 增加 probe `stage.drop` 后 `rollout restart ds/alloy`。  
-详见桌面 `09` §7。
+脚本：`scripts/day48-alloy-probe-drop.sh`
