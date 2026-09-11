@@ -16,6 +16,8 @@ spec:
     spec:
       serviceAccountName: beyla
       hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
         - name: harbor-pull-secret
       containers:
@@ -24,6 +26,7 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true
+            runAsUser: 0
             readOnlyRootFilesystem: true
           env:
             - name: BEYLA_CONFIG_PATH
@@ -34,24 +37,46 @@ spec:
               value: http://otel-collector.tracing.svc.cluster.local:4318
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: http/protobuf
+            - name: BEYLA_BPF_FS_BASE_DIR
+              value: /sys/fs/bpf
           volumeMounts:
             - name: config
               mountPath: /config
               readOnly: true
             - name: var-run-beyla
               mountPath: /var/run/beyla
+            - name: cgroup
+              mountPath: /sys/fs/cgroup
+            - name: tracefs
+              mountPath: /sys/kernel/tracing
+            - name: bpffs
+              mountPath: /sys/fs/bpf
+            - name: debugfs
+              mountPath: /sys/kernel/debug
           resources:
             requests:
               cpu: 50m
               memory: 128Mi
             limits:
-              cpu: 500m
-              memory: 512Mi
+              cpu: "1"
+              memory: 1Gi
       volumes:
         - name: config
           configMap:
             name: beyla-config
         - name: var-run-beyla
           emptyDir: {}
+        - name: cgroup
+          hostPath:
+            path: /sys/fs/cgroup
+        - name: tracefs
+          hostPath:
+            path: /sys/kernel/tracing
+        - name: bpffs
+          hostPath:
+            path: /sys/fs/bpf
+        - name: debugfs
+          hostPath:
+            path: /sys/kernel/debug
       tolerations:
         - operator: Exists
