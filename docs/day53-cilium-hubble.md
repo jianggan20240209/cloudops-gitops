@@ -6,21 +6,21 @@
 
 检查 Cilium、Hubble Peer/Relay/UI；验证 Pod→Pod、Pod→Service、到 Harbor 连通。
 
-## 验收
+## 验收（2026-09-11）
 
-- [ ] Cilium agent Ready
-- [ ] hubble-relay / hubble-ui Ready
-- [ ] cloudops-dev 内 Pod→Service / Pod→Pod 成功
-- [ ] 可访问 Harbor HTTPS
-- [ ] Hubble UI 或 `hubble observe` 能看到流量
+- [x] Cilium agent Ready **10/10**
+- [x] hubble-relay / hubble-ui Running；Hubble UI `cloudops-dev` 可见流量（含 → `otel-collector:4318`）
+- [x] Pod→Service：`cicd_svc 200` / `gateway_svc 200`（debug curl Pod）
+- [x] Pod→Pod IP：`cicd_pod 200`
+- [x] Harbor HTTPS：pod + host 均 OK
 
 ## 命令
 
 ```bash
 cd ~/code/cloudops-gitops && git pull
 bash scripts/day53-check-cilium-hubble.sh
-
-# Hubble UI（可选）
 kubectl -n kube-system port-forward svc/hubble-ui 12000:80
-# 浏览器 http://127.0.0.1:12000
+# http://127.0.0.1:12000
 ```
+
+说明：gateway/cicd 为 scratch 镜像无 wget，连通性用 `library/curl` 诊断 Pod 探测。
