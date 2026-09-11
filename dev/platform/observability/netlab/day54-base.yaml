@@ -15,11 +15,18 @@ metadata:
     app: day54-server
 spec:
   containers:
-    - name: nginx
+    - name: web
       image: harbor-server.jianggan.cn/library/nginx:1.27-alpine
       imagePullPolicy: IfNotPresent
       ports:
-        - containerPort: 80
+        - name: http
+          containerPort: 80
+      readinessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 1
+        periodSeconds: 2
   imagePullSecrets:
     - name: harbor-pull-secret
 ---
@@ -36,7 +43,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 80
+      targetPort: http
 ---
 apiVersion: v1
 kind: Pod
