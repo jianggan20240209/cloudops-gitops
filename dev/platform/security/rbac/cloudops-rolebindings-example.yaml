@@ -1,0 +1,34 @@
+# 示例绑定 —— 默认注释掉 subjects，避免误授权。
+# 用法：复制后填入真实 User/Group/SA，再 apply。
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cloudops-readonly-example
+  labels:
+    cloudops.jianggan.cn/day: "65"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cloudops-readonly
+subjects: []
+# subjects:
+#   - kind: User
+#     name: oidc:jianggan-readonly
+#     apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloudops-admin-in-dev-example
+  namespace: cloudops-dev
+  labels:
+    cloudops.jianggan.cn/day: "65"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cloudops-admin
+subjects: []
+# subjects:
+#   - kind: User
+#     name: oidc:jianggan-admin
+#     apiGroup: rbac.authorization.k8s.io

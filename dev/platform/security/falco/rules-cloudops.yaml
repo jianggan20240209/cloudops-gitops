@@ -1,0 +1,9 @@
+# Standalone custom rules reference (also embedded in values-lab.yaml)
+# Mount via Falco customRules or ConfigMap depending on chart version.
+- rule: CloudOps Write under etc
+  desc: Unexpected write under /etc in container
+  condition: >
+    open_write and container and fd.name startswith /etc
+  output: Write under /etc (file=%fd.name container=%container.name)
+  priority: WARNING
+  tags: [cloudops, day68, sensitive]

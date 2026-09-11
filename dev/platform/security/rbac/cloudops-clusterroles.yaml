@@ -1,0 +1,74 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloudops-readonly
+  labels:
+    cloudops.jianggan.cn/day: "65"
+    cloudops.jianggan.cn/rbac-tier: readonly
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "services", "endpoints", "configmaps", "events", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications", "rollouts", "analysisruns"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloudops-releaser
+  labels:
+    cloudops.jianggan.cn/day: "65"
+    cloudops.jianggan.cn/rbac-tier: releaser
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["rollouts", "analysisruns"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events", "services"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloudops-approver
+  labels:
+    cloudops.jianggan.cn/day: "65"
+    cloudops.jianggan.cn/rbac-tier: approver
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "events", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  # 审批通过注释/标签表达；无 delete、无 secrets 读写
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloudops-admin
+  labels:
+    cloudops.jianggan.cn/day: "65"
+    cloudops.jianggan.cn/rbac-tier: admin
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+  # 注意：这是「平台管理员」语义模板；绑定范围应用 RoleBinding 限到 cloudops-* ns，
+  # 不要用 ClusterRoleBinding 绑到真人。真实落地请拆成 namespaced Role。

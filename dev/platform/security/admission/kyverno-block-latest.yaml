@@ -1,0 +1,28 @@
+# Kyverno 草案：禁止 cloudops-dev 使用 :latest
+# 需集群已装 Kyverno；本周默认不强制安装。
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: cloudops-disallow-latest-tag
+  annotations:
+    cloudops.jianggan.cn/day: "67"
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: disallow-latest
+      match:
+        any:
+          - resources:
+              kinds: ["Pod", "Deployment"]
+              namespaces: ["cloudops-dev"]
+      validate:
+        message: "cloudops-dev 禁止使用 :latest 镜像标签（Day 67）"
+        pattern:
+          spec:
+            =(containers):
+              - =(image): "!*:latest"
+            =(template):
+              spec:
+                =(containers):
+                  - =(image): "!*:latest"

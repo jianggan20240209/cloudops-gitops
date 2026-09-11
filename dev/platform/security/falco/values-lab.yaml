@@ -1,0 +1,49 @@
+# Falco lab values — Day 68
+# helm upgrade --install falco falcosecurity/falco -n falco --create-namespace -f values-lab.yaml
+namespace: falco
+
+driver:
+  enabled: true
+  kind: modern_ebpf
+
+falco:
+  json_output: true
+  http_output:
+    enabled: false
+  grpc:
+    enabled: false
+  rules_files:
+    - /etc/falco/falco_rules.yaml
+    - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/rules.d
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+tolerations:
+  - operator: Exists
+
+customRules:
+  cloudops-lab.yaml: |-
+    - rule: CloudOps Unexpected Shell in Container
+      desc: Detect shell spawned in container (lab)
+      condition: >
+        spawned_process and container and
+        proc.name in (bash, sh, zsh, ash)
+      output: >
+        Shell in container (user=%user.name container=%container.name
+        image=%container.image.repository cmdline=%proc.cmdline)
+      priority: WARNING
+      tags: [cloudops, day68, shell]
+
+    - rule: CloudOps Privileged Container Started
+      desc: Privileged container started
+      condition: container_started and container.privileged=true
+      output: Privileged container started (image=%container.image.repository name=%container.name)
+      priority: WARNING
+      tags: [cloudops, day68, privileged]
