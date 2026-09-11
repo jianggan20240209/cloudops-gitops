@@ -15,8 +15,6 @@
 - `dev/platform/security/falco/rules-cloudops.yaml`
 - `scripts/day68-falco-plan.sh`（打印安装命令，不默认安装）
 
-```bash
-# 确认后安装（会改集群）：
-# helm repo add falcosecurity https://falcosecurity.github.io/charts
-# helm upgrade --install falco falcosecurity/falco -n falco --create-namespace -f values-lab.yaml
-```
+安装：`CONFIRM=1 bash scripts/day68-falco-plan.sh`  
+
+**延期**：集群建设完成前不安装。跟踪：`docs/deferred-week10-security-followups.md`

@@ -15,6 +15,8 @@
 | 65 | CloudOps RBAC 模板 | ✅ |
 | 66 | NetPol/Secret/网格规范 | ✅ |
 | 67 | Harbor 扫描 + 准入草案 | ✅ |
-| 68 | Falco 规划/清单 | ✅（安装需确认） |
+| 68 | Falco 规划/清单 | ✅（安装**延期**） |
 | 69 | 边界设计 | ✅ |
 | 70 | 复盘 + ADR-005 | ✅ |
+
+延期三项（Falco 安装 / Kyverno Enforce / Harbor 自动扫描）：`docs/deferred-week10-security-followups.md`

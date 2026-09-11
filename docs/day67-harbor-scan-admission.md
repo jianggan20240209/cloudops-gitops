@@ -22,3 +22,5 @@ Jenkins 构建 → Harbor 扫描 →（可选）Kyverno/策略检查 tag+扫描�
 ```
 
 草案：`dev/platform/security/admission/kyverno-block-latest.yaml`（默认不强制 apply）
+
+**延期**：Kyverno 安装 / Enforce、Harbor UI 自动扫描 — 见 `docs/deferred-week10-security-followups.md`
