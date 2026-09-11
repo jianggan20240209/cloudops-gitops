@@ -1,0 +1,121 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cloudops-week9-basic-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/part-of: cloudops
+    cloudops.jianggan.cn/day: "58"
+spec:
+  groups:
+    - name: cloudops.node
+      rules:
+        - alert: NodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: P1
+            priority: P1
+          annotations:
+            summary: "Node {{ $labels.node }} not Ready"
+            description: "节点 Ready 条件为 false 超过 5 分钟。"
+            runbook_url: "https://cloudops.jianggan.cn/"
+
+        - alert: NodeFilesystemAlmostOutOfSpace
+          expr: |
+            (
+              node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+            ) < 0.15
+          for: 10m
+          labels:
+            severity: P2
+            priority: P2
+          annotations:
+            summary: "Disk almost full on {{ $labels.instance }}"
+            description: "文件系统可用空间 < 15%。"
+
+    - name: cloudops.pod
+      rules:
+        - alert: KubePodCrashLooping
+          expr: |
+            max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"}[5m]) >= 1
+          for: 10m
+          labels:
+            severity: P1
+            priority: P1
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} CrashLoopBackOff"
+            description: "容器处于 CrashLoopBackOff。"
+
+        - alert: KubePodOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+          for: 0m
+          labels:
+            severity: P1
+            priority: P1
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} OOMKilled"
+            description: "容器最近一次终止原因为 OOMKilled。"
+
+        - alert: KubePodRestartsHigh
+          expr: |
+            increase(kube_pod_container_status_restarts_total[30m]) > 3
+          for: 5m
+          labels:
+            severity: P2
+            priority: P2
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarts high"
+            description: "30 分钟内重启次数 > 3。"
+
+    - name: cloudops.dns
+      rules:
+        - alert: CoreDNSDown
+          expr: up{job=~".*coredns.*"} == 0
+          for: 3m
+          labels:
+            severity: P0
+            priority: P0
+          annotations:
+            summary: "CoreDNS target down"
+            description: "CoreDNS scrape target 不可用。"
+
+    - name: cloudops.apps
+      rules:
+        - alert: CloudOpsGatewayDown
+          expr: up{job="cloudops-gateway"} == 0
+          for: 3m
+          labels:
+            severity: P0
+            priority: P0
+          annotations:
+            summary: "cloudops-gateway down"
+            description: "gateway Prometheus target down。"
+
+        - alert: CloudOpsGatewayHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job="cloudops-gateway",code=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(http_requests_total{job="cloudops-gateway"}[5m])), 0.001)
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: P1
+            priority: P1
+          annotations:
+            summary: "cloudops-gateway 5xx ratio > 5%"
+            description: "网关 5 分钟错误率超过 5%。"
+
+        - alert: Day61RedisDown
+          expr: up{job="day61-redis"} == 0
+          for: 1m
+          labels:
+            severity: P2
+            priority: P2
+          annotations:
+            summary: "day61-redis down (fault drill)"
+            description: "第 9 周演练用 Redis 不可用。"

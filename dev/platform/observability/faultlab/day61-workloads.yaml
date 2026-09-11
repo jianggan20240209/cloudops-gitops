@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudops-faultlab
+  labels:
+    cloudops.jianggan.cn/day: "61"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: day61-redis
+  namespace: cloudops-dev
+  labels:
+    app: day61-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: day61-redis
+  template:
+    metadata:
+      labels:
+        app: day61-redis
+    spec:
+      containers:
+        - name: redis
+          image: harbor-server.jianggan.cn/library/redis:7.2-alpine
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: day61-redis
+  namespace: cloudops-dev
+  labels:
+    app: day61-redis
+    job: day61-redis
+spec:
+  selector:
+    app: day61-redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+# Optional: scrape redis exporter later. For Day61 drill, scale to 0 triggers Day61RedisDown if exporter/up exists.
+# Minimal drill without exporter: use script to delete pods / scale 0 and observe app errors.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: day61-oom-demo
+  namespace: cloudops-faultlab
+  labels:
+    app: day61-oom-demo
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: day61-oom-demo
+  template:
+    metadata:
+      labels:
+        app: day61-oom-demo
+    spec:
+      containers:
+        - name: stress
+          image: harbor-server.jianggan.cn/library/busybox:1.36
+          command: ["sh", "-c", "dd if=/dev/zero of=/dev/shm/fill bs=1M count=200 || sleep 3600"]
+          resources:
+            requests:
+              memory: 16Mi
+            limits:
+              memory: 32Mi

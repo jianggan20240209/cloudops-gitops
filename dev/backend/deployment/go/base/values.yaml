@@ -34,6 +34,10 @@ prometheus:
   enabled: false
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
 
+alertmanager:
+  enabled: false
+  server: http://kube-prometheus-stack-alertmanager.monitoring.svc:9093
+
 victorialogs:
   enabled: false
   server: http://vls-victoria-logs-single-server.logging.svc.cluster.local:9428

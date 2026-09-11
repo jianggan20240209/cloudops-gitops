@@ -31,8 +31,12 @@ harbor:
     passwordKey: password
 
 prometheus:
-  enabled: false
+  enabled: true
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+
+alertmanager:
+  enabled: true
+  server: http://kube-prometheus-stack-alertmanager.monitoring.svc:9093
 
 victorialogs:
   enabled: true

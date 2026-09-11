@@ -61,6 +61,10 @@ spec:
             - name: PROMETHEUS_SERVER
               value: {{ .Values.prometheus.server | quote }}
 {{- end }}
+{{- if and .Values.alertmanager .Values.alertmanager.enabled }}
+            - name: ALERTMANAGER_URL
+              value: {{ .Values.alertmanager.server | quote }}
+{{- end }}
 {{- if and .Values.victorialogs .Values.victorialogs.enabled }}
             - name: VICTORIA_LOGS_URL
               value: {{ .Values.victorialogs.server | quote }}
