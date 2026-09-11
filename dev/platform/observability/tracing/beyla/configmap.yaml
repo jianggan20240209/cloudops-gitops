@@ -16,6 +16,3 @@ data:
         - k8s_namespace: cloudops-dev
     routes:
       unmatched: heuristic
-    otel_traces_export:
-      # Prefer env OTEL_EXPORTER_OTLP_ENDPOINT; kept here as documentation fallback
-      endpoint: http://otel-collector.tracing.svc.cluster.local:4318
