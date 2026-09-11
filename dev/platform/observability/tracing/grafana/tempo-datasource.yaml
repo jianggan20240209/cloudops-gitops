@@ -16,11 +16,10 @@ data:
         uid: tempo
         url: http://tempo.tracing.svc.cluster.local:3200
         isDefault: false
-        editable: false
+        editable: true
         jsonData:
           httpMethod: GET
           tracesToLogsV2:
-            datasourceUid: ""
             spanStartTimeShift: "-1h"
             spanEndTimeShift: "1h"
             filterByTraceID: true
@@ -31,5 +30,3 @@ data:
             enabled: true
           search:
             hide: false
-          lokiSearch:
-            datasourceUid: ""
