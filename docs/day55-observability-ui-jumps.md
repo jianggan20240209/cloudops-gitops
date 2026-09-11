@@ -10,9 +10,9 @@
 
 ## 验收（2026-09-11）
 
-- [x] CloudOps 首页三个跳转可用（`main-11`，Synced/Healthy）  
+- [x] CloudOps 首页三个跳转可用（含 Hubble `https://192.168.1.200:12000`）  
 - [x] 页面可见「Day 55 · 观测入口」/「观测跳转」  
-- [ ] Hubble：`0.0.0.0:12000` port-forward 后卡片打开 `https://192.168.1.200:12000`（URL 修正后需再发一版）  
+- [x] Hubble 跳转 URL 已上线（`main-11` 之后含 `192.168.1.200:12000` 的发版）  
 - [x] 一页纸可讲 5–8 分钟  
 
 ## 命令
@@ -32,4 +32,4 @@ kubectl -n kube-system port-forward --address 0.0.0.0 svc/hubble-ui 12000:80
 Pipeline：`test-cloudops-web-kaniko`（`Jenkinsfile.cloudops-web-kaniko`）  
 会构建 `harbor-server.jianggan.cn/cloudops/cloudops-web:main-${BUILD_NUMBER}`，并 **自动 patch** Argo `cloudops-web-dev` 的 `app.imageTag` + sync。
 
-当前运行：`main-11`。Hubble 跳转改为 `https://192.168.1.200:12000` 后需再 Build 一次。
+当前运行：含 Hubble `https://192.168.1.200:12000` 的发版（Day 55 Ready）。
