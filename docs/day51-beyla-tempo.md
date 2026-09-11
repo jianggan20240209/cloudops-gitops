@@ -20,12 +20,10 @@ Grafana Explore（Tempo datasource）按 trace_id 查询
 ## 部署
 
 ```bash
-# 1) 镜像（harbor-server）
-bash scripts/day51-mirror-beyla-image.sh
-
-# 2) 清单
-cd ~/code/cloudops-gitops && git pull   # SSH 不通则靠 Samba
-bash scripts/day51-deploy-beyla.sh
+# harbor-server 一键（镜像 + 部署 + 造流探测）
+cd ~/code/cloudops-gitops
+# git pull 若 github:22 不通：用 Samba 同步到含 5aa4b86 后再执行
+bash scripts/day51-run-all-on-harbor.sh
 ```
 
 清单：`dev/platform/observability/tracing/beyla/`、`.../grafana/tempo-datasource.yaml`
