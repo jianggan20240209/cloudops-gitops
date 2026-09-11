@@ -16,6 +16,7 @@
 - [x] EXP1：before 200 → deny 后 000 → restore 200
 - [x] EXP2：good svc 200 / broken svc 000（broken EndpointSlice 无地址）
 - [x] EXP3：before 200 → deny 后 000 → cleanup 后 200
+- [x] `cleanup` 已删除 `cloudops-netlab`
 - [ ] Hubble UI 选 `cloudops-netlab` 看 deny/drop（实验 3，可选复核）
 
 ## 命令
