@@ -84,11 +84,11 @@ case "$cmd" in
     echo "deleted namespace $NS"
     ;;
   all)
-    "$0" apply-base
-    "$0" exp1-dns
-    "$0" exp2-svc
-    "$0" exp3-netpol
-    echo "Labs done. Run: $0 cleanup   when finished."
+    bash "$SELF" apply-base
+    bash "$SELF" exp1-dns
+    bash "$SELF" exp2-svc
+    bash "$SELF" exp3-netpol
+    echo "Labs done. Run: bash $SELF cleanup   when finished."
     ;;
   *)
     echo "Usage: $0 {apply-base|exp1-dns|exp2-svc|exp3-netpol|all|cleanup}"
