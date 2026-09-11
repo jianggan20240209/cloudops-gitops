@@ -10,20 +10,23 @@ Grafana Explore（Tempo datasource）按 trace_id 查询
 日志仍：Alloy → VictoriaLogs（ADR-002）
 ```
 
-## 验收
+## 验收（2026-09-11）
 
-- [ ] Harbor：`library/beyla:2.0.4`
-- [ ] `tracing`：DaemonSet `beyla` Ready
-- [ ] Grafana：Tempo datasource 可见
-- [ ] 造流后 Tempo / Grafana 至少 1 条 `cloudops-dev` Trace
+- [x] Harbor：`library/beyla:2.0.4`
+- [x] `tracing`：DaemonSet `beyla` 10/10 Ready（`discovery.services` + `k8s_namespace: cloudops-dev`）
+- [x] Tempo `/api/search` 可见 `cloudops-web` / `cloudops-gateway` / `cloudops-observe` 等 Trace
+- [x] Grafana：ConfigMap `monitoring/grafana-tempo-datasource` 已创建（`grafana_datasource: "1"`）
 
 ## 部署
 
 ```bash
-# harbor-server 一键（镜像 + 部署 + 造流探测）
 cd ~/code/cloudops-gitops
-# git pull 若 github:22 不通：用 Samba 同步到含 5aa4b86 后再执行
 bash scripts/day51-run-all-on-harbor.sh
 ```
 
 清单：`dev/platform/observability/tracing/beyla/`、`.../grafana/tempo-datasource.yaml`
+
+## 备注
+
+- Beyla **2.0.4** 配置键为 `discovery.services`（不是新版文档的 `discovery.instrument`）。
+- Grafana 若 `rollout restart` 卡在 PVC Multi-Attach：先删 Pending 新 Pod，再删旧 Running Pod，让副本在 PVC 所在节点重建。
