@@ -28,8 +28,15 @@ kubectl -n kube-system port-forward svc/hubble-ui 12000:80
 
 ## 发版
 
-1. 合并 `cloudops-platform` 中 `services/cloudops-web` 变更  
-2. Jenkins 构建 `cloudops-web` Kaniko，记下新 `main-N`  
-3.  bump `dev/frontend/deployment/ui/base/values/cloudops-web.yaml` 的 `imageTag` 并 sync Argo  
+Pipeline：`test-cloudops-web-kaniko`（`Jenkinsfile.cloudops-web-kaniko`）  
+会构建 `harbor-server.jianggan.cn/cloudops/cloudops-web:main-${BUILD_NUMBER}`，并 **自动 patch** Argo `cloudops-web-dev` 的 `app.imageTag` + sync。
 
-（直播发版前请确认。）
+```bash
+# 在能访问 Jenkins 的机器上触发（或 UI Build Now）
+# Job: test-cloudops-web-kaniko
+# 代码已在 cloudops-platform main：ce13ae7
+
+# 验收
+curl -sk https://cloudops.jianggan.cn/ | grep -E 'Day 55|观测跳转'
+kubectl -n cloudops-dev get deploy cloudops-web -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
