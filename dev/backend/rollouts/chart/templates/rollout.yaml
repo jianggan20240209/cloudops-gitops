@@ -53,6 +53,23 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: HTTP_ADDR
+              value: ":{{ .Values.service.targetPort }}"
+{{- if and .Values.otel .Values.otel.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.app.name | quote }}
+            - name: SERVICE_VERSION
+              value: {{ .Values.image.tag | quote }}
+            - name: DEPLOYMENT_ENVIRONMENT
+              value: {{ .Values.otel.environment | default .Values.app.env | quote }}
+            - name: DEPLOYMENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+{{- end }}
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.readiness.path }}

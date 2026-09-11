@@ -35,11 +35,11 @@ cd ~/code/cloudops-gitops && git pull
 bash scripts/day52-verify-otel-sdk.sh
 ```
 
-## 验收
+## 验收（2026-09-11）
 
-- [ ] Jenkins 出新 `main-<N>` 镜像并滚动
-- [ ] Pod env 含 `OTEL_EXPORTER_OTLP_ENDPOINT` / `DEPLOYMENT_ID`
-- [ ] 日志出现 `otel_enabled`
-- [ ] Tempo Span Resource 含 `service.version`、`deployment.id`
+- [x] Jenkins：`cloudops-gateway:main-25`（`8ada9c6`）已滚动；`otel_enabled` 含 `service.version` / `deployment.id`
+- [ ] `cloudops-cicd` 新镜像 + `otel_enabled`（确认 `main-53` 或当前 BUILD）
+- [ ] Rollout `cloudops-gateway-rollout` 已切到 `main-25`（`api.cloudops.jianggan.cn`）
+- [ ] Tempo Span Resource 可见 `service.version`、`deployment.id`
 - [ ] VictoriaLogs 同 `trace_id` 命中
-- [ ] `/metrics` 仍有 version 标签
+- [x] `/metrics` 仍有 version 标签（既有行为）

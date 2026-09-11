@@ -95,3 +95,8 @@ serviceMonitor:
   release: kube-prometheus-stack
   interval: 30s
   path: /metrics
+
+otel:
+  enabled: false
+  endpoint: http://otel-collector.tracing.svc.cluster.local:4318
+  environment: dev

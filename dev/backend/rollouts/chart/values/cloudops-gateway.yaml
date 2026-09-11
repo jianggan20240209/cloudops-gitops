@@ -5,7 +5,7 @@ app:
 
 image:
   repository: harbor-server.jianggan.cn/cloudops/cloudops-gateway
-  tag: main-13
+  tag: main-25
   pullPolicy: IfNotPresent
   pullSecret: harbor-pull-secret
 
@@ -100,3 +100,8 @@ serviceMonitor:
   release: kube-prometheus-stack
   interval: 30s
   path: /metrics
+
+otel:
+  enabled: true
+  endpoint: http://otel-collector.tracing.svc.cluster.local:4318
+  environment: dev
