@@ -38,6 +38,16 @@ GET /api/v1/cicd/apps/{name}/records/latest
 GET /api/v1/cicd/apps/{name}/rollback-candidates
 ```
 
+## 已落地 API（Week 12）
+
+```text
+GET/POST /api/v1/cicd/release-requests
+GET      /api/v1/cicd/release-requests/{id}
+POST     /api/v1/cicd/release-requests/{id}/decide   # approved|rejected
+```
+
+CloudOps Web：首页「发布申请」面板。存储：Postgres `release_requests`（与 release_records 同库）或内存降级。
+
 ## 审批最小规则（lab）
 
 1. `high` 风险：必须填写 `rollback_plan` + Day 82 清单勾选。  
