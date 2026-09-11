@@ -79,6 +79,20 @@ spec:
                   name: {{ .Values.releaseRecords.writeAuth.tokenSecret.name }}
                   key: {{ .Values.releaseRecords.writeAuth.tokenSecret.key }}
 {{- end }}
+{{- if and .Values.otel .Values.otel.enabled }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.endpoint | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.app.serviceName | quote }}
+            - name: SERVICE_VERSION
+              value: {{ .Values.app.imageTag | quote }}
+            - name: DEPLOYMENT_ENVIRONMENT
+              value: {{ .Values.otel.environment | default .Values.base.envName | quote }}
+            - name: DEPLOYMENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+{{- end }}
           readinessProbe:
             httpGet:
               path: /readyz

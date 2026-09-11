@@ -38,6 +38,11 @@ victorialogs:
   enabled: false
   server: http://vls-victoria-logs-single-server.logging.svc.cluster.local:9428
 
+otel:
+  enabled: false
+  endpoint: http://otel-collector.tracing.svc.cluster.local:4318
+  environment: dev
+
 kubernetes:
   enabled: false
   serviceAccountName: cloudops-cicd

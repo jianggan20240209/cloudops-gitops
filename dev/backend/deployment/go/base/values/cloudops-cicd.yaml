@@ -34,6 +34,11 @@ prometheus:
   enabled: true
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
 
+otel:
+  enabled: true
+  endpoint: http://otel-collector.tracing.svc.cluster.local:4318
+  environment: dev
+
 kubernetes:
   enabled: true
   serviceAccountName: cloudops-cicd

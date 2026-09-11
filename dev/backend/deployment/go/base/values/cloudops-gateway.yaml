@@ -33,3 +33,8 @@ harbor:
 prometheus:
   enabled: false
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+
+otel:
+  enabled: true
+  endpoint: http://otel-collector.tracing.svc.cluster.local:4318
+  environment: dev
