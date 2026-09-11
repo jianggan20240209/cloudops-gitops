@@ -61,6 +61,36 @@ spec:
             - name: PROMETHEUS_SERVER
               value: {{ .Values.prometheus.server | quote }}
 {{- end }}
+{{- if and .Values.jenkins .Values.jenkins.enabled }}
+            - name: JENKINS_URL
+              value: {{ .Values.jenkins.server | quote }}
+            - name: JENKINS_INSECURE
+              value: {{ .Values.jenkins.insecure | default "true" | quote }}
+            - name: JENKINS_MAX_CONCURRENT
+              value: {{ .Values.jenkins.maxConcurrent | default "3" | quote }}
+            - name: JENKINS_QUEUE_TIMEOUT
+              value: {{ .Values.jenkins.queueTimeout | default "300" | quote }}
+            - name: JENKINS_BUILD_TIMEOUT
+              value: {{ .Values.jenkins.buildTimeout | default "7200" | quote }}
+            - name: JENKINS_POLL_INTERVAL
+              value: {{ .Values.jenkins.pollInterval | default "10" | quote }}
+            - name: JENKINS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.jenkins.credentialSecret.name }}
+                  key: {{ .Values.jenkins.credentialSecret.usernameKey | default "username" }}
+            - name: JENKINS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.jenkins.credentialSecret.name }}
+                  key: {{ .Values.jenkins.credentialSecret.tokenKey | default "token" }}
+{{- if .Values.jenkins.webhookInfoUrl }}
+            - name: WEBHOOK_INFO_URL
+              value: {{ .Values.jenkins.webhookInfoUrl | quote }}
+{{- end }}
+            - name: SEND_WEBHOOK
+              value: {{ .Values.jenkins.sendWebhook | default "false" | quote }}
+{{- end }}
 {{- if and .Values.alertmanager .Values.alertmanager.enabled }}
             - name: ALERTMANAGER_URL
               value: {{ .Values.alertmanager.server | quote }}

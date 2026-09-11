@@ -30,6 +30,21 @@ harbor:
     usernameKey: username
     passwordKey: password
 
+jenkins:
+  enabled: true
+  server: https://jenkins.jianggan.cn
+  insecure: "true"
+  maxConcurrent: "3"
+  queueTimeout: "300"
+  buildTimeout: "7200"
+  pollInterval: "10"
+  sendWebhook: "false"
+  webhookInfoUrl: ""
+  credentialSecret:
+    name: cloudops-cicd-jenkins-credential
+    usernameKey: username
+    tokenKey: token
+
 prometheus:
   enabled: true
   server: http://kube-prometheus-stack-prometheus.monitoring.svc:9090
