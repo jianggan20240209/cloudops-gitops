@@ -7,12 +7,12 @@ metadata:
     app.kubernetes.io/name: beyla
 data:
   beyla-config.yml: |
-    # Day 51: auto-instrument cloudops-dev HTTP workloads → OTLP → Collector → Tempo
+    # Day 51 / Beyla 2.0.4: key is discovery.services (not discovery.instrument)
     attributes:
       kubernetes:
         enable: true
     discovery:
-      instrument:
+      services:
         - k8s_namespace: cloudops-dev
     routes:
       unmatched: heuristic
