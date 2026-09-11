@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: beyla-config
+  namespace: tracing
+  labels:
+    app.kubernetes.io/name: beyla
+data:
+  beyla-config.yml: |
+    # Day 51: auto-instrument cloudops-dev HTTP workloads → OTLP → Collector → Tempo
+    attributes:
+      kubernetes:
+        enable: true
+    discovery:
+      instrument:
+        - k8s_namespace: cloudops-dev
+    routes:
+      unmatched: heuristic
+    otel_traces_export:
+      # Prefer env OTEL_EXPORTER_OTLP_ENDPOINT; kept here as documentation fallback
+      endpoint: http://otel-collector.tracing.svc.cluster.local:4318
