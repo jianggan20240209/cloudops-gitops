@@ -11,6 +11,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LAB="$ROOT/dev/platform/observability/netlab"
 NS=cloudops-netlab
+SELF="$ROOT/scripts/day54-network-fault-labs.sh"
 
 ensure_pull_secret() {
   if ! kubectl -n "$NS" get secret harbor-pull-secret >/dev/null 2>&1; then
