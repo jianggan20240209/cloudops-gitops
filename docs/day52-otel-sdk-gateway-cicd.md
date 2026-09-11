@@ -11,19 +11,35 @@ gateway/cicd SDK ──OTLP :4318──► otel-collector ──► Tempo
 其余服务：Beyla（Day 51）
 ```
 
-## 验收
+## 代码 / GitOps
 
-- [ ] 新镜像含 OTel SDK（Jenkins 构建 gateway + cicd）
-- [ ] Helm `otel.enabled: true`，Pod env 含 `OTEL_EXPORTER_OTLP_ENDPOINT` / `DEPLOYMENT_ID`
-- [ ] Tempo Span Resource 可见 `service.version`、`deployment.id`
-- [ ] VictoriaLogs 同 `trace_id` 命中 JSON 访问日志
-- [ ] `/metrics` 仍含 version 标签
+| 仓库 | 提交 |
+|------|------|
+| cloudops-platform | `f7e2dc6` feat(otel): gateway + cicd SDK |
+| cloudops-gitops | `ec25327` Helm `otel.enabled` + verify script |
 
-## 部署
+## 构建部署（harbor / Jenkins UI）
 
 ```bash
-# 1) 构建镜像（Jenkins）：cloudops-gateway / cloudops-cicd
-# 2) bump imageTag 后 Argo 同步，或：
+# Jenkins 任务（构建并自动 patch Argo imageTag）：
+#   test-cloudops-gateway-kaniko
+#   test-cloudops-cicd-kaniko
+# 先确保 Argo 已同步 gitops（otel env），再跑上述两个 Job
+
 cd ~/code/cloudops-gitops && git pull
-# 确认 values 中 otel.enabled 与 imageTag
+# 若 Argo 未自动同步：
+# argocd app sync cloudops-gateway-dev cloudops-cicd-dev
+# 或 kubectl -n argocd patch ...
+
+# Job 成功、Pod 滚动后：
+bash scripts/day52-verify-otel-sdk.sh
 ```
+
+## 验收
+
+- [ ] Jenkins 出新 `main-<N>` 镜像并滚动
+- [ ] Pod env 含 `OTEL_EXPORTER_OTLP_ENDPOINT` / `DEPLOYMENT_ID`
+- [ ] 日志出现 `otel_enabled`
+- [ ] Tempo Span Resource 含 `service.version`、`deployment.id`
+- [ ] VictoriaLogs 同 `trace_id` 命中
+- [ ] `/metrics` 仍有 version 标签
