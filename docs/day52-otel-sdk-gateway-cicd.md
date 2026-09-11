@@ -15,31 +15,24 @@ gateway/cicd SDK ──OTLP :4318──► otel-collector ──► Tempo
 
 | 仓库 | 提交 |
 |------|------|
-| cloudops-platform | `f7e2dc6` feat(otel): gateway + cicd SDK |
-| cloudops-gitops | `ec25327` Helm `otel.enabled` + verify script |
-
-## 构建部署（harbor / Jenkins UI）
-
-```bash
-# Jenkins 任务（构建并自动 patch Argo imageTag）：
-#   test-cloudops-gateway-kaniko
-#   test-cloudops-cicd-kaniko
-# 先确保 Argo 已同步 gitops（otel env），再跑上述两个 Job
-
-cd ~/code/cloudops-gitops && git pull
-# 若 Argo 未自动同步：
-# argocd app sync cloudops-gateway-dev cloudops-cicd-dev
-# 或 kubectl -n argocd patch ...
-
-# Job 成功、Pod 滚动后：
-bash scripts/day52-verify-otel-sdk.sh
-```
+| cloudops-platform | `8ada9c6` OTel SDK + semconv v1.26 |
+| cloudops-gitops | `7b9e45f` Deploy/Rollout `otel.enabled` |
 
 ## 验收（2026-09-11）
 
-- [x] Jenkins：`cloudops-gateway:main-25`（`8ada9c6`）已滚动；`otel_enabled` 含 `service.version` / `deployment.id`
-- [ ] `cloudops-cicd` 新镜像 + `otel_enabled`（确认 `main-53` 或当前 BUILD）
-- [ ] Rollout `cloudops-gateway-rollout` 已切到 `main-25`（`api.cloudops.jianggan.cn`）
-- [ ] Tempo Span Resource 可见 `service.version`、`deployment.id`
-- [ ] VictoriaLogs 同 `trace_id` 命中
-- [x] `/metrics` 仍有 version 标签（既有行为）
+- [x] `cloudops-gateway` Deploy：`main-25`，`otel_enabled`
+- [x] `cloudops-gateway-rollout`：`main-25` + OTEL env，`api.cloudops.jianggan.cn` → `version=main-25`
+- [x] `cloudops-cicd`：`main-53`，`otel_enabled`（`service.version=main-53`）
+- [x] Resource 日志可见 `service.version` / `deployment.id` / `deployment.environment=dev`
+- [ ] Grafana Tempo：打开 Span 确认 Resource 属性（Explore 人工点开即可）
+- [ ] VictoriaLogs：同 `trace_id` 命中访问日志（可选交叉验证）
+
+## 快速复查
+
+```bash
+curl -sk https://api.cloudops.jianggan.cn/api/v1/version
+kubectl -n cloudops-dev logs -l app=cloudops-gateway-rollout --tail=5 | grep otel_enabled
+kubectl -n cloudops-dev logs -l app=cloudops-cicd --tail=5 | grep otel_enabled
+bash scripts/day52-verify-otel-sdk.sh
+# Grafana Explore → Tempo → service.name = cloudops-gateway-rollout | cloudops-cicd
+```
