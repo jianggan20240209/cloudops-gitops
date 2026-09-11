@@ -1,0 +1,15 @@
+# Experiment 1: deny all egress from day54-client (includes DNS → resolve fail)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: day54-deny-dns
+  namespace: cloudops-netlab
+  labels:
+    experiment: dns-deny
+spec:
+  podSelector:
+    matchLabels:
+      app: day54-client
+  policyTypes:
+    - Egress
+  # no egress rules ⇒ deny all egress (including UDP/TCP 53)

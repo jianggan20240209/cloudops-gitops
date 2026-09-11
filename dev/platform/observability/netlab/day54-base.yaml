@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudops-netlab
+  labels:
+    app.kubernetes.io/part-of: cloudops-day54
+    purpose: network-fault-lab
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: day54-server
+  namespace: cloudops-netlab
+  labels:
+    app: day54-server
+spec:
+  containers:
+    - name: nginx
+      image: harbor-server.jianggan.cn/library/nginx:1.27-alpine
+      imagePullPolicy: IfNotPresent
+      ports:
+        - containerPort: 80
+  imagePullSecrets:
+    - name: harbor-pull-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: day54-server
+  namespace: cloudops-netlab
+  labels:
+    app: day54-server
+spec:
+  selector:
+    app: day54-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: day54-client
+  namespace: cloudops-netlab
+  labels:
+    app: day54-client
+spec:
+  containers:
+    - name: curl
+      image: harbor-server.jianggan.cn/library/curl:8.16.0
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "3600"]
+  imagePullSecrets:
+    - name: harbor-pull-secret

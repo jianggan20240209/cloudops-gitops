@@ -1,0 +1,57 @@
+# Experiment 3: deny ingress to day54-server from day54-client (allow DNS + kube)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: day54-deny-client-to-server
+  namespace: cloudops-netlab
+  labels:
+    experiment: netpol-deny
+spec:
+  podSelector:
+    matchLabels:
+      app: day54-server
+  policyTypes:
+    - Ingress
+  ingress:
+    # empty except we only allow from non-client; deny client by omission
+    - from:
+        - podSelector:
+            matchLabels:
+              app: day54-allow-me
+---
+# Also deny client egress to server (optional belt); keep DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: day54-client-egress
+  namespace: cloudops-netlab
+  labels:
+    experiment: netpol-deny
+spec:
+  podSelector:
+    matchLabels:
+      app: day54-client
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # allow kube-dns alternate labels
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # intentionally NO egress to day54-server

@@ -1,0 +1,16 @@
+# Experiment 2: Service with wrong selector → no Endpoints → connection fail
+apiVersion: v1
+kind: Service
+metadata:
+  name: day54-server-broken
+  namespace: cloudops-netlab
+  labels:
+    app: day54-server
+    experiment: service-miss
+spec:
+  selector:
+    app: day54-server-DOES-NOT-EXIST
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
