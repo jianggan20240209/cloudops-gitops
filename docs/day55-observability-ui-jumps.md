@@ -32,4 +32,17 @@ kubectl -n kube-system port-forward --address 0.0.0.0 svc/hubble-ui 12000:80
 Pipeline：`test-cloudops-web-kaniko`（`Jenkinsfile.cloudops-web-kaniko`）  
 会构建 `harbor-server.jianggan.cn/cloudops/cloudops-web:main-${BUILD_NUMBER}`，并 **自动 patch** Argo `cloudops-web-dev` 的 `app.imageTag` + sync。
 
-当前运行：含 Hubble `https://192.168.1.200:12000` 的发版（Day 55 Ready）。
+当前运行：含 Hubble `http://192.168.1.200:12000` 的发版（port-forward 为 HTTP；HTTPS 会 `ERR_SSL_PROTOCOL_ERROR`）。
+
+## Tempo Explore `fields` 崩溃（非 DNS）
+
+现象：Grafana Explore → Tempo 报 `TypeError: Cannot read properties of undefined (reading 'fields')`。
+
+**不是** CoreDNS 缺 `grafana.jianggan.cn`：页面已能打开即说明浏览器侧解析正常（本环境一般是 `192.168.1.210`）。
+
+常见原因与处理：
+
+1. 跳转 URL 使用了新式 `panes=` Explore 状态 → 部分 Grafana 前端会崩；改用经典 `left=`（`cloudops-web` `f68f0b0`）。
+2. Tempo datasource 里 `tracesToLogs` / `lokiSearch` 的 `datasourceUid: ""` → 去掉空 uid（gitops `6634373`）。
+
+手工验收：Grafana → Explore → 选 Tempo → TraceQL Search，不要带坏的 `panes=` 书签 URL。
