@@ -1,0 +1,54 @@
+base:
+  envName: dev
+  namespace: cloudops-dev
+
+app:
+  serviceName: cloudops-aiops
+  servicePort: 80
+  ingressPath: /api/v1/aiops
+  imageTag: main-1
+  replicas: 1
+
+service:
+  targetPort: 8080
+  type: ClusterIP
+
+argocd:
+  enabled: false
+
+harbor:
+  enabled: false
+
+prometheus:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+victorialogs:
+  enabled: false
+
+kubernetes:
+  enabled: false
+
+releaseRecords:
+  database:
+    enabled: false
+  writeAuth:
+    enabled: false
+  postgres:
+    enabled: false
+
+upstream:
+  enabled: true
+  observe: http://cloudops-observe.cloudops-dev.svc.cluster.local
+  cicd: http://cloudops-cicd.cloudops-dev.svc.cluster.local
+
+hpa:
+  enabled: false
+
+pdb:
+  enabled: false
+
+otel:
+  enabled: false

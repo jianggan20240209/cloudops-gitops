@@ -1,0 +1,14 @@
+{{- if and .Values.pdb .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "cloudops-go.name" . }}
+  namespace: {{ .Values.base.namespace }}
+  labels:
+{{ include "cloudops-go.labels" . | indent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ include "cloudops-go.name" . }}
+{{- end }}

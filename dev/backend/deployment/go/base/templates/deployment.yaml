@@ -113,6 +113,12 @@ spec:
                   name: {{ .Values.releaseRecords.writeAuth.tokenSecret.name }}
                   key: {{ .Values.releaseRecords.writeAuth.tokenSecret.key }}
 {{- end }}
+{{- if and .Values.upstream .Values.upstream.enabled }}
+            - name: OBSERVE_BASE_URL
+              value: {{ .Values.upstream.observe | quote }}
+            - name: CICD_BASE_URL
+              value: {{ .Values.upstream.cicd | quote }}
+{{- end }}
 {{- if and .Values.otel .Values.otel.enabled }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: {{ .Values.otel.endpoint | quote }}
