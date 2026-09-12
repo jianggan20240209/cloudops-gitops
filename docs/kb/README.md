@@ -67,6 +67,12 @@ RAG 周：[day121-126-week18-rag.md](../day121-126-week18-rag.md)
 
 - 作为有状态卷与 Velero/CSI 快照前提，见 [day114](../day114-velero-install-plan.md)、[day118](../day118-rto-rpo-bc.md)；Helm values 中可见 `storageClassName=longhorn`（如 release postgres）。
 
+## 作品集 / 架构
+
+| 文档 | 说明 |
+|------|------|
+| [day155-architecture-diagrams.md](../day155-architecture-diagrams.md) | 第 23 周架构图集（拓扑/模块/可观测/发布/AIOps） |
+
 ## Deferred（禁止当「已上线能力」检索）
 
 - [deferred-week15-22-runtime-followups.md](../deferred-week15-22-runtime-followups.md)  
